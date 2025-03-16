@@ -38,3 +38,8 @@ Thumbs.db
 # SSL Keys
 /keys/*.pem
 !/keys/.gitkeep
+
+# SQLite databases
+*.sqlite
+*.sqlite3
+*.db

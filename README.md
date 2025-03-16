@@ -4,9 +4,10 @@ Secure banking application that integrates with the central bank and enables int
 
 ## Features
 
-- User registration and authentication with JWT tokens
-- Multiple currency accounts per user
-- Internal bank transfers
+- User registration with simplified requirements (name, username, password)
+- Default EUR account with 100 EUR initial balance for new users
+- Multiple currency accounts per user (EUR, USD, GBP)
+- Internal bank transfers with same-currency validation
 - External bank transfers via Central Bank integration
 - Secure communication using JWT-signed payloads
 - Transaction history and status tracking
@@ -20,7 +21,7 @@ Secure banking application that integrates with the central bank and enables int
 ## Technical Stack
 
 - Express.js (backend framework)
-- MariaDB (relational database)
+- SQLite (relational database)
 - Sequelize (ORM)
 - JWT (authentication and secure messaging)
 - Node.js (runtime)
@@ -37,20 +38,8 @@ Secure banking application that integrates with the central bank and enables int
    npm install
    ```
 
-2. Install and configure MariaDB:
-   - Install MariaDB on your system
-   - Create a new database:
-     ```sql
-     CREATE DATABASE nele_bank;
-     CREATE DATABASE nele_bank_test;  # For testing environment
-     ```
-   - Create a database user:
-     ```sql
-     CREATE USER 'nele_user'@'localhost' IDENTIFIED BY 'your_password';
-     GRANT ALL PRIVILEGES ON nele_bank.* TO 'nele_user'@'localhost';
-     GRANT ALL PRIVILEGES ON nele_bank_test.* TO 'nele_user'@'localhost';
-     FLUSH PRIVILEGES;
-     ```
+2. Database Setup:
+   The application uses SQLite which requires no additional installation. The database file will be automatically created when you start the application.
 
 3. Configure environment variables:
    ```bash
@@ -60,11 +49,8 @@ Secure banking application that integrates with the central bank and enables int
 
    Required environment variables:
    - Database configuration:
-     - `DB_HOST`: MariaDB host (default: localhost)
-     - `DB_PORT`: MariaDB port (default: 3306)
-     - `DB_USERNAME`: Database user
-     - `DB_PASSWORD`: Database password
-     - `DB_DATABASE`: Database name
+     - `DB_PATH`: Path to SQLite database file (default: ./nele_bank.sqlite)
+     - `TEST_DB_PATH`: Path to test database file (default: ./nele_bank_test.sqlite)
    - Bank interoperability:
      - `BANK_API_KEY`: API key from Central Bank (obtained during registration)
      - `BANK_PREFIX`: Your bank's 3-character prefix (assigned by Central Bank)
@@ -80,13 +66,10 @@ Secure banking application that integrates with the central bank and enables int
    npm run generate-keys
    ```
 
-4. Initialize database schema:
+4. Initialize database:
    ```bash
-   # Development database
-   npx sequelize-cli db:migrate
-   
-   # Test database (if needed)
-   NODE_ENV=test npx sequelize-cli db:migrate
+   # The database schema will be automatically created on first run
+   npm run dev
    ```
 
 5. Start development server:
@@ -103,12 +86,27 @@ Secure banking application that integrates with the central bank and enables int
 ## API Documentation
 
 Once the server is running, visit:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+- Swagger UI: http://localhost:3000/docs
+
+The API documentation includes:
+- All available endpoints
+- Request/response examples
+- Authentication requirements
+- Schema definitions
 
 ## Security
 
-- All endpoints are secured with JWT authentication
+### Authentication
+
+Public endpoints (no authentication required):
+- POST /users - User registration
+- POST /sessions - User login
+- GET /transactions/jwks - Bank's public keys
+- POST /transactions/b2b - Inter-bank transactions
+
+All other endpoints require JWT authentication.
+
+### Security Features
 - Inter-bank communication uses JWT-signed payloads
 - Bank's public key is published via JWKS endpoint
 - All incoming transactions are validated using sender's public key
@@ -119,23 +117,35 @@ Once the server is running, visit:
 
 ## Bank Registration
 
-1. Generate your RSA key pair using the provided script
-2. Configure your bank's details in `.env`
-3. Run the registration endpoint to register with the Central Bank:
+1. Generate your RSA key pair using the provided script:
    ```bash
-   curl -X POST http://localhost:3000/api/v1/banks/register \
-     -H "Content-Type: application/json" \
-     -d '{
-       "ownerInfo": {
-         "name": "Bank Owner Name",
-         "email": "owner@bank.com",
-         "phone": "+1234567890"
-       }
-     }'
+   npm run generate-keys
    ```
-4. Store the received API key in your `.env` file
+
+2. Configure your bank's details in `.env` (copy from .env.example)
+
+3. Register with the Central Bank using your bank's details
+
+4. Update your `.env` with the received API key
 
 ## Bank-to-Bank Transactions
+
+### User Registration
+```bash
+POST /users
+Content-Type: application/json
+
+{
+  "name": "John Doe",        # 2-100 characters, letters/spaces/hyphens only
+  "username": "johndoe123",  # 3-50 characters, alphanumeric/underscores/hyphens
+  "password": "securepass"   # minimum 8 characters
+}
+```
+
+Upon successful registration:
+- A new user account is created
+- A default EUR account is created with 100 EUR initial balance
+- Additional currency accounts can be created with 0 initial balance
 
 ### Sending a Transaction
 ```bash
@@ -199,6 +209,15 @@ For production:
 2. **Transaction Verification Failed**
    - Verify the sending bank's prefix matches their registration
    - Check if the sending bank is active in Central Bank
+
+3. **Database Issues**
+   - Ensure write permissions for the SQLite database directory
+   - Check if the database file path in .env is correct
+   - For fresh start, delete the .sqlite file and restart the application
+
+4. **Currency Mismatch**
+   - For internal transfers, both accounts must use the same currency
+   - External transfers will be automatically converted at the receiving bank
    - Ensure the JWT signature is valid
 
 3. **Currency Conversion Failed**
