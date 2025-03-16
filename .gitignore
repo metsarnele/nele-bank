@@ -1,0 +1,40 @@
+# Dependencies
+node_modules
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# Build output
+dist
+build
+
+# IDE and editor files
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# SSL Keys
+/keys/*.pem
+!/keys/.gitkeep
