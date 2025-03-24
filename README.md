@@ -86,7 +86,7 @@ Secure banking application that integrates with the central bank and enables int
 ## API Documentation
 
 Once the server is running, visit:
-- Swagger UI: http://localhost:3000/docs
+- Swagger UI: http://localhost:3001/docs
 
 The API documentation includes:
 - All available endpoints

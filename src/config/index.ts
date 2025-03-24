@@ -61,9 +61,9 @@ interface Config {
 
 export const config: Config = {
   env: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '3000', 10),
+  port: parseInt(process.env.PORT || '3001', 10),
   app: {
-    baseUrl: process.env.APP_BASE_URL || 'http://localhost:3000',
+    baseUrl: process.env.APP_BASE_URL || 'http://localhost:3001',
   },
   bank: {
     name: process.env.BANK_NAME || 'Nele Bank',
@@ -71,8 +71,8 @@ export const config: Config = {
     apiKey: process.env.BANK_API_KEY || '',
     privateKeyPath: process.env.BANK_PRIVATE_KEY_PATH || path.join(__dirname, '../../keys/private_key.pem'),
     publicKeyPath: process.env.BANK_PUBLIC_KEY_PATH || path.join(__dirname, '../../keys/public_key.pem'),
-    transactionEndpoint: process.env.BANK_TRANSACTION_ENDPOINT || 'http://localhost:3000/transactions/b2b',
-    jwksEndpoint: process.env.BANK_JWKS_ENDPOINT || 'http://localhost:3000/.well-known/jwks.json',
+    transactionEndpoint: process.env.BANK_TRANSACTION_ENDPOINT || 'http://localhost:3001/transactions/b2b',
+    jwksEndpoint: process.env.BANK_JWKS_ENDPOINT || 'http://localhost:3001/.well-known/jwks.json',
   },
   jwt: {
     secret: process.env.JWT_SECRET || 'your-secret-key-for-jwt',

@@ -7,7 +7,7 @@ dotenv.config();
 // Define environment variables schema
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().default('3000'),
+  PORT: z.string().default('3001'),
   DB_PATH: z.string().default('./nele_bank.sqlite'),
   JWT_SECRET: z.string().default('your-secret-key'),
 });
@@ -31,7 +31,7 @@ export const config = {
     prefix: process.env.BANK_PREFIX || 'NELE',
     publicKeyPath: process.env.BANK_PUBLIC_KEY_PATH || './keys/public_key.pem',
     privateKeyPath: process.env.BANK_PRIVATE_KEY_PATH || './keys/private_key.pem',
-    transactionEndpoint: process.env.BANK_TRANSACTION_ENDPOINT || 'http://localhost:3000/api/v1/transactions/b2b'
+    transactionEndpoint: process.env.BANK_TRANSACTION_ENDPOINT || 'http://localhost:3001/api/v1/transactions/b2b'
   },
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes

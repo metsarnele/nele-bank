@@ -25,8 +25,8 @@ export class BankController {
       const registrationData = {
         name,
         owners,
-        jwksUrl: `${config.app.baseUrl}/.well-known/jwks.json`,
-        transactionUrl: `${config.app.baseUrl}/transactions/b2b`
+        jwksUrl: `http://localhost:${config.port}/.well-known/jwks.json`,
+        transactionUrl: `http://localhost:${config.port}/transactions/b2b`
       };
 
       const registrationResponse = await this.bankService.registerBank(registrationData);
