@@ -23,7 +23,7 @@ const options: swaggerJsdoc.Options = {
     servers: [
       {
         url: '/api/v1',
-        description: 'Development server'
+        description: `${config.env === 'production' ? 'Production' : 'Development'} server`
       }
     ],
     components: {
