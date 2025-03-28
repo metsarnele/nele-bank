@@ -3,6 +3,7 @@ node_modules
 
 nginx.conf
 
+
 # Environment variables
 .env
 .env.*
