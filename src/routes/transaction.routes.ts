@@ -27,29 +27,56 @@ const jwksController = JWKSController.getInstance();
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/TransferResponse'
- *             example:
- *               - id: 1
- *                 fromAccountId: 123
- *                 toAccount: 'ABC123456789'
- *                 amount: 500.00
- *                 currency: 'EUR'
- *                 description: 'Rent payment'
- *                 type: 'internal'
- *                 status: 'completed'
- *                 createdAt: '2025-03-11T15:00:00Z'
- *               - id: 2
- *                 fromAccountId: 123
- *                 toAccount: 'XYZ987654321'
- *                 toBankId: 'BANK002'
- *                 amount: 1000.00
- *                 currency: 'EUR'
- *                 description: 'Car payment'
- *                 type: 'external'
- *                 status: 'completed'
- *                 createdAt: '2025-03-11T15:30:00Z'
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: ['success']
+ *                   example: 'success'
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 1
+ *                       transactionId:
+ *                         type: string
+ *                         format: 'uuid'
+ *                         example: '123e4567-e89b-12d3-a456-426614174000'
+ *                       type:
+ *                         type: string
+ *                         enum: ['internal', 'external']
+ *                         example: 'internal'
+ *                       status:
+ *                         type: string
+ *                         enum: ['pending', 'inProgress', 'completed', 'failed']
+ *                         example: 'completed'
+ *                       amount:
+ *                         type: number
+ *                         example: 500.00
+ *                       currency:
+ *                         type: string
+ *                         enum: ['EUR', 'USD', 'GBP']
+ *                         example: 'EUR'
+ *                       fromAccountId:
+ *                         type: integer
+ *                         example: 123
+ *                       toAccountId:
+ *                         type: integer
+ *                         example: 456
+ *                       description:
+ *                         type: string
+ *                         example: 'Rent payment'
+ *                       createdAt:
+ *                         type: string
+ *                         format: 'date-time'
+ *                         example: '2025-03-11T15:00:00Z'
+ *                       completedAt:
+ *                         type: string
+ *                         format: 'date-time'
+ *                         example: '2025-03-11T15:00:02Z'
  *       401:
  *         description: Not authenticated
  *         content:
@@ -57,10 +84,13 @@ const jwksController = JWKSController.getInstance();
  *             schema:
  *               type: object
  *               properties:
- *                 error:
+ *                 status:
  *                   type: string
- *             example:
- *               error: 'Authentication token is missing or invalid'
+ *                   enum: ['error']
+ *                   example: 'error'
+ *                 message:
+ *                   type: string
+ *                   example: 'Authentication token is missing'
  */
 router.get('/', authenticate, (req, res) => transactionController.getTransactionHistory(req, res));
 
@@ -163,10 +193,12 @@ router.get('/', authenticate, (req, res) => transactionController.getTransaction
  *             examples:
  *               invalidInput:
  *                 value:
- *                   error: 'Invalid amount: must be greater than 0'
+ *                   status: 'error'
+ *                   message: 'Invalid amount: must be greater than 0'
  *               insufficientFunds:
  *                 value:
- *                   error: 'Insufficient funds: available balance is 1000.00 EUR'
+ *                   status: 'error'
+ *                   message: 'Insufficient funds: available balance is 1000.00 EUR'
  *       401:
  *         description: Not authenticated
  *         content:
@@ -174,10 +206,13 @@ router.get('/', authenticate, (req, res) => transactionController.getTransaction
  *             schema:
  *               type: object
  *               properties:
- *                 error:
+ *                 status:
  *                   type: string
- *             example:
- *               error: 'Authentication token is missing or invalid'
+ *                   enum: ['error']
+ *                   example: 'error'
+ *                 message:
+ *                   type: string
+ *                   example: 'Authentication token is missing'
  *       404:
  *         description: Receiver not found
  *         content:
@@ -185,10 +220,13 @@ router.get('/', authenticate, (req, res) => transactionController.getTransaction
  *             schema:
  *               type: object
  *               properties:
- *                 error:
+ *                 status:
  *                   type: string
- *             example:
- *               error: 'Receiver account ABC123456789 not found'
+ *                   enum: ['error']
+ *                   example: 'error'
+ *                 message:
+ *                   type: string
+ *                   example: 'Receiver account ABC123456789 not found'
  */
 router.post('/', authenticate, validateRequest({
   body: internalTransferSchema.or(externalTransferSchema)
@@ -284,12 +322,17 @@ router.get('/jwks', (req, res) => jwksController.getJWKS(req, res));
  *             schema:
  *               type: object
  *               properties:
- *                 error:
+ *                 status:
+ *                   type: string
+ *                   enum: ['error']
+ *                   example: 'error'
+ *                 message:
  *                   type: string
  *             examples:
  *               parsingJwtFailed:
  *                 value:
- *                   error: 'Parsing JWT payload failed: Invalid token format'
+ *                   status: 'error'
+ *                   message: 'Parsing JWT payload failed: Invalid token format'
  *       404:
  *         description: Account not found
  *         content:
@@ -297,10 +340,13 @@ router.get('/jwks', (req, res) => jwksController.getJWKS(req, res));
  *             schema:
  *               type: object
  *               properties:
- *                 error:
+ *                 status:
  *                   type: string
- *             example:
- *               error: 'Account not found'
+ *                   enum: ['error']
+ *                   example: 'error'
+ *                 message:
+ *                   type: string
+ *                   example: 'Account not found'
  *       500:
  *         description: Server error occurred during transaction processing
  *         content:
@@ -308,10 +354,13 @@ router.get('/jwks', (req, res) => jwksController.getJWKS(req, res));
  *             schema:
  *               type: object
  *               properties:
- *                 error:
+ *                 status:
  *                   type: string
- *             example:
- *               error: 'Cannot verify your signature: The jwksUrl of your bank is missing'
+ *                   enum: ['error']
+ *                   example: 'error'
+ *                 message:
+ *                   type: string
+ *                   example: 'Cannot verify your signature: The jwksUrl of your bank is missing'
  *       502:
  *         description: Central Bank error
  *         content:
@@ -319,10 +368,13 @@ router.get('/jwks', (req, res) => jwksController.getJWKS(req, res));
  *             schema:
  *               type: object
  *               properties:
- *                 error:
+ *                 status:
  *                   type: string
- *             example:
- *               error: 'Central Bank error: Service temporarily unavailable'
+ *                   enum: ['error']
+ *                   example: 'error'
+ *                 message:
+ *                   type: string
+ *                   example: 'Central Bank error: Service temporarily unavailable'
  */
 router.post('/b2b',
   validateRequest({ body: b2bTransactionSchema }),

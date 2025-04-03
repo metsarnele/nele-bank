@@ -28,39 +28,68 @@ const userController = UserController.getInstance();
  *             schema:
  *               type: object
  *               properties:
- *                 id:
+ *                 status:
  *                   type: string
- *                   example: '5f7739fedc144dc2b25cfa75'
- *                 name:
+ *                   enum: ['success']
+ *                   example: 'success'
+ *                 message:
  *                   type: string
- *                   example: 'Miki Hiir'
- *                 username:
- *                   type: string
- *                   example: 'miki'
- *                 accounts:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       name:
- *                         type: string
- *                         example: 'Main'
- *                       balance:
- *                         type: number
- *                         example: 100000
- *                       currency:
- *                         type: string
- *                         example: 'EUR'
- *                       number:
- *                         type: string
- *                         example: 'abc633520f3596e174fd17832eefa508c0b'
- *                       id:
- *                         type: string
- *                         example: '5f7739fedc144dc2b25cfa76'
+ *                   example: 'User registered successfully'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     name:
+ *                       type: string
+ *                       example: 'Miki Hiir'
+ *                     username:
+ *                       type: string
+ *                       example: 'miki'
  *       400:
  *         description: Invalid input data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: ['error']
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       example: 'VALIDATION_ERROR'
+ *                     message:
+ *                       type: string
+ *                       example: 'Invalid request data'
+ *                     details:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           field:
+ *                             type: string
+ *                           message:
+ *                             type: string
+ *                           code:
+ *                             type: string
  *       409:
  *         description: Username already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: ['error']
+ *                 message:
+ *                   type: string
+ *                   example: 'Username already exists'
  */
 router.post('/',
   validateRequest({ body: userRegistrationSchema }),
