@@ -12,7 +12,9 @@ const router = Router();
 // Define routes
 router.use('/users', userRoutes);
 router.use('/sessions', sessionRoutes);
-router.use('/transactions', authenticate, transactionRoutes);
+// Don't apply authentication middleware at the router level for transactions
+// as some transaction endpoints need to be public
+router.use('/transactions', transactionRoutes);
 router.use('/accounts', authenticate, accountRoutes);
 
 // Log registered routes

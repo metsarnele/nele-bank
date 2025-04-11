@@ -100,10 +100,13 @@ const accountController = AccountController.getInstance();
  *             schema:
  *               type: object
  *               properties:
- *                 error:
+ *                 status:
  *                   type: string
- *             example:
- *               error: 'Authentication token is missing or invalid'
+ *                   enum: ['error']
+ *                   example: 'error'
+ *                 message:
+ *                   type: string
+ *                   example: 'Authentication token is missing'
  *       404:
  *         description: Account not found
  *         content:

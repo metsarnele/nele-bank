@@ -1,6 +1,50 @@
 import { OpenAPIV3 } from 'openapi-types';
 
 export const schemas: { [key: string]: OpenAPIV3.SchemaObject } = {
+  Error: {
+    type: 'object',
+    properties: {
+      status: {
+        type: 'string',
+        enum: ['error'],
+        description: 'Error status'
+      },
+      error: {
+        type: 'object',
+        properties: {
+          code: {
+            type: 'string',
+            description: 'Error code'
+          },
+          message: {
+            type: 'string',
+            description: 'Error message'
+          },
+          details: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                field: {
+                  type: 'string',
+                  description: 'Field with error'
+                },
+                message: {
+                  type: 'string',
+                  description: 'Error message for the field'
+                },
+                code: {
+                  type: 'string',
+                  description: 'Error code for the field'
+                }
+              }
+            },
+            description: 'Detailed error information'
+          }
+        }
+      }
+    }
+  },
   UserRegistration: {
     type: 'object',
     required: ['name', 'username', 'password'],
@@ -503,33 +547,5 @@ export const schemas: { [key: string]: OpenAPIV3.SchemaObject } = {
       signature: 'base64_encoded_signature_here'
     }
   },
-  Error: {
-    type: 'object',
-    required: ['status', 'error'],
-    properties: {
-      status: {
-        type: 'string',
-        enum: ['error'],
-        description: 'Error status'
-      },
-      error: {
-        type: 'object',
-        required: ['code', 'message'],
-        properties: {
-          code: {
-            type: 'string',
-            description: 'Error code'
-          },
-          message: {
-            type: 'string',
-            description: 'Error message'
-          },
-          details: {
-            type: 'object',
-            description: 'Additional error details'
-          }
-        }
-      }
-    }
-  }
+
 };

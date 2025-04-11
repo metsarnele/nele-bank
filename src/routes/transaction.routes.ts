@@ -13,6 +13,9 @@ const router = Router();
 const transactionController = TransactionController.getInstance();
 const jwksController = JWKSController.getInstance();
 
+// Get transaction history (protected endpoint)
+router.get('/', authenticate, (req, res) => transactionController.getTransactionHistory(req, res));
+
 /**
  * @swagger
  * /transactions:
@@ -228,6 +231,7 @@ router.get('/', authenticate, (req, res) => transactionController.getTransaction
  *                   type: string
  *                   example: 'Receiver account ABC123456789 not found'
  */
+// Create transaction (protected endpoint)
 router.post('/', authenticate, validateRequest({
   body: internalTransferSchema.or(externalTransferSchema)
 }), (req, res) => {
@@ -272,9 +276,11 @@ router.post('/', authenticate, validateRequest({
  *             example:
  *               keys:
  *                 - kty: 'RSA'
- *                   kid: '12345-67890-abcdef'
- *                   n: 'very-long-base64-encoded-modulus'
+ *                   n: 'sNO9smFz1GKJjDpjE-KTfS-Ri4O9V0sOJC7RZXXUZ3fbi3UwcD-MtQ8iek0JZEKELgjQoagugDm9PQ67FHQEdBZ__zrt6hxwA2_TAE0XjhztUJNzmw2S6vPf-TaLgWt4-mVtwNp-uAnYd_kO4xdtPBwySF9vLD4UmyXJJqXl8z3mBZ723kNkhUmxtKBRSSA8fmARDHqLN3YwU5Hd0Nvd9Mj1PYRWd1gz9wFEXqpbunQsggLuF2d5JgZdC598tyjSPrKmOODU3r53MD_0VbMTGuXAkBWauk3eEJ5byTURbtpy77aUDmB5fHEY7aSwxsOYNiCo3bXwO6GQaoOwt9hZkQ'
  *                   e: 'AQAB'
+ *                   kid: 'NELE'
+ *                   use: 'sig'
+ *                   alg: 'RS256'
  *       500:
  *         description: Server error
  *         content:
@@ -287,6 +293,7 @@ router.post('/', authenticate, validateRequest({
  *             example:
  *               error: 'Failed to load public keys'
  */
+// JWKS endpoint should be public (no authentication required)
 router.get('/jwks', (req, res) => jwksController.getJWKS(req, res));
 
 /**
@@ -322,17 +329,10 @@ router.get('/jwks', (req, res) => jwksController.getJWKS(req, res));
  *             schema:
  *               type: object
  *               properties:
- *                 status:
+ *                 error:
  *                   type: string
- *                   enum: ['error']
- *                   example: 'error'
- *                 message:
- *                   type: string
- *             examples:
- *               parsingJwtFailed:
- *                 value:
- *                   status: 'error'
- *                   message: 'Parsing JWT payload failed: Invalid token format'
+ *             example:
+ *               error: 'Parsing JWT payload failed: reason here'
  *       404:
  *         description: Account not found
  *         content:

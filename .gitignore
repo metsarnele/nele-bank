@@ -19,6 +19,7 @@ pids
 *.pid
 *.seed
 
+
 # Build output
 dist
 build
@@ -46,3 +47,6 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 *.db
+
+# API Documentation
+openapi.json

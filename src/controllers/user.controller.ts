@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { UserService } from '../services/user.service';
 import { AccountService } from '../services/account.service';
 import { IUser } from '../interfaces/user.interface';
+import { ReasonPhrases } from 'http-status-codes';
+import http from 'http';
 
 export class UserController {
   private static instance: UserController;
@@ -118,10 +120,17 @@ export class UserController {
         token: accessToken
       });
     } catch (error: any) {
-      res.status(401).json({
+      // Use a direct approach to set the status without the 'Error:' prefix
+      // This bypasses Express's default behavior of adding 'Error:' to status messages
+      res.statusCode = 401;
+      res.setHeader('Content-Type', 'application/json');
+      // Use the raw http.ServerResponse.writeHead method to set the status message directly
+      (res as any).writeHead(401, 'Unauthorized');
+      res.write(JSON.stringify({
         status: 'error',
-        message: error.message
-      });
+        message: 'Invalid username or password'
+      }));
+      res.end();
     }
   }
 

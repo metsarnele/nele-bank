@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/user.controller';
 import { authenticate } from '../middlewares/auth.middleware';
-import { validateRequest } from '../middlewares/validation.middleware';
+import { validateSessionRequest } from '../middlewares/session-validation.middleware';
 import { userLoginSchema } from '../schemas/user.schema';
 
 const router = Router();
@@ -13,6 +13,7 @@ const userController = UserController.getInstance();
  *   post:
  *     tags: [Sessions]
  *     summary: Log in a user
+ *     description: Authenticates a user and returns a JWT token
  *     security: []
  *     requestBody:
  *       required: true
@@ -34,32 +35,40 @@ const userController = UserController.getInstance();
  *                 token:
  *                   type: string
  *             example:
- *               token: '5f883c52cdb989473690cc95'
+ *               token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
  *       400:
- *         description: Invalid request
+ *         description: "Error: Bad Request"
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 error:
+ *                 status:
+ *                   type: string
+ *                   enum: ["error"]
+ *                 message:
  *                   type: string
  *             example:
- *               error: 'Username and password are required'
+ *               status: 'error'
+ *               message: 'Username and password are required'
  *       401:
- *         description: Invalid credentials
+ *         description: "Error: Unauthorized"
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 error:
+ *                 status:
+ *                   type: string
+ *                   enum: ["error"]
+ *                 message:
  *                   type: string
  *             example:
- *               error: 'Invalid username or password'
+ *               status: 'error'
+ *               message: 'Invalid username or password'
  */
 router.post('/',
-  validateRequest({ body: userLoginSchema }),
+  validateSessionRequest(userLoginSchema),
   (req, res) => userController.login(req, res)
 );
 
@@ -79,9 +88,13 @@ router.post('/',
  *             schema:
  *               type: object
  *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: ["success"]
  *                 message:
  *                   type: string
  *             example:
+ *               status: 'success'
  *               message: 'Successfully logged out'
  *       401:
  *         description: Not authenticated
@@ -90,10 +103,13 @@ router.post('/',
  *             schema:
  *               type: object
  *               properties:
- *                 error:
+ *                 status:
  *                   type: string
- *             example:
- *               error: 'Authentication token is missing or invalid'
+ *                   enum: ['error']
+ *                   example: 'error'
+ *                 message:
+ *                   type: string
+ *                   example: 'Authentication token is missing'
  */
 router.delete('/', authenticate, (req, res) => userController.logout(req, res));
 

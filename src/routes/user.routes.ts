@@ -113,6 +113,18 @@ router.post('/',
  *               $ref: '#/components/schemas/Account'
  *       401:
  *         description: Not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: ['error']
+ *                   example: 'error'
+ *                 message:
+ *                   type: string
+ *                   example: 'Authentication token is missing'
  */
 router.get('/current',
   authenticate,
