@@ -288,10 +288,14 @@ router.post('/', authenticate, validateRequest({
  *             schema:
  *               type: object
  *               properties:
- *                 error:
+ *                 status:
+ *                   type: string
+ *                   enum: ["error"]
+ *                 message:
  *                   type: string
  *             example:
- *               error: 'Failed to load public keys'
+ *               status: 'error'
+ *               message: 'Failed to generate JWKS'
  */
 // JWKS endpoint should be public (no authentication required)
 router.get('/jwks', (req, res) => jwksController.getJWKS(req, res));
@@ -319,9 +323,14 @@ router.get('/jwks', (req, res) => jwksController.getJWKS(req, res));
  *             schema:
  *               type: object
  *               properties:
- *                 receiverName:
+ *                 status:
  *                   type: string
- *                   example: 'Jack Daniels'
+ *                   enum: ["success"]
+ *                 message:
+ *                   type: string
+ *             example:
+ *               status: 'success'
+ *               message: 'Transaction processed successfully'
  *       400:
  *         description: Bad request
  *         content:
@@ -329,10 +338,14 @@ router.get('/jwks', (req, res) => jwksController.getJWKS(req, res));
  *             schema:
  *               type: object
  *               properties:
- *                 error:
+ *                 status:
+ *                   type: string
+ *                   enum: ["error"]
+ *                 message:
  *                   type: string
  *             example:
- *               error: 'Parsing JWT payload failed: reason here'
+ *               status: 'error'
+ *               message: 'Parsing JWT payload failed: reason here'
  *       404:
  *         description: Account not found
  *         content:

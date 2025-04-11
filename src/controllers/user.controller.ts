@@ -120,10 +120,13 @@ export class UserController {
         token: accessToken
       });
     } catch (error: any) {
-      // Use standard Express response method
+      // Use a consistent error format that matches your OpenAPI specification
       res.status(401).json({
         status: 'error',
-        message: 'Invalid username or password'
+        error: {
+          code: 'AUTHENTICATION_ERROR',
+          message: 'Invalid username or password'
+        }
       });
     }
   }

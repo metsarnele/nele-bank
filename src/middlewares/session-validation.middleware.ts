@@ -17,10 +17,22 @@ export const validateSessionRequest = (schema: ZodTypeAny) => {
         // Use the exact error message from the OpenAPI specification example
         const message = 'Username and password are required';
         
-        // Use standard Express response method
+        // Use a consistent error format that matches your OpenAPI specification
         res.status(400).json({
           status: 'error',
-          message
+          error: {
+            code: 'VALIDATION_ERROR',
+            message,
+            details: [{
+              field: 'username',
+              message: 'Required',
+              code: 'invalid_type'
+            }, {
+              field: 'password',
+              message: 'Required',
+              code: 'invalid_type'
+            }]
+          }
         });
       } else {
         next(error);

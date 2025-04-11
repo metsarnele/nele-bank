@@ -46,11 +46,41 @@ const userController = UserController.getInstance();
  *                 status:
  *                   type: string
  *                   enum: ["error"]
- *                 message:
- *                   type: string
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                     message:
+ *                       type: string
+ *                     details:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           field:
+ *                             type: string
+ *                           message:
+ *                             type: string
+ *                           code:
+ *                             type: string
  *             example:
  *               status: 'error'
- *               message: 'Username and password are required'
+ *               error:
+ *                 code: 'VALIDATION_ERROR'
+ *                 message: 'Username and password are required'
+ *                 details: [
+ *                   {
+ *                     field: 'username',
+ *                     message: 'Required',
+ *                     code: 'invalid_type'
+ *                   },
+ *                   {
+ *                     field: 'password',
+ *                     message: 'Required',
+ *                     code: 'invalid_type'
+ *                   }
+ *                 ]
  *       401:
  *         description: "Error: Unauthorized"
  *         content:
@@ -61,11 +91,18 @@ const userController = UserController.getInstance();
  *                 status:
  *                   type: string
  *                   enum: ["error"]
- *                 message:
- *                   type: string
+ *                 error:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                     message:
+ *                       type: string
  *             example:
  *               status: 'error'
- *               message: 'Invalid username or password'
+ *               error:
+ *                 code: 'AUTHENTICATION_ERROR'
+ *                 message: 'Invalid username or password'
  */
 router.post('/',
   validateSessionRequest(userLoginSchema),

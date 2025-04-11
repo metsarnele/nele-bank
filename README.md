@@ -38,6 +38,11 @@ Secure banking application that integrates with the central bank and enables int
    npm install
    ```
 
+   If you encounter any issues with missing dependencies, make sure to install them explicitly:
+   ```bash
+   npm install http-status-codes
+   ```
+
 2. Database Setup:
    The application uses SQLite which requires no additional installation. The database file will be automatically created when you start the application.
 
