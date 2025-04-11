@@ -17,17 +17,11 @@ export const validateSessionRequest = (schema: ZodTypeAny) => {
         // Use the exact error message from the OpenAPI specification example
         const message = 'Username and password are required';
         
-        // Use a direct approach to set the status without the 'Error:' prefix
-        // This bypasses Express's default behavior of adding 'Error:' to status messages
-        res.statusCode = 400;
-        res.setHeader('Content-Type', 'application/json');
-        // Use the raw http.ServerResponse.writeHead method to set the status message directly
-        (res as any).writeHead(400, 'Bad Request');
-        res.write(JSON.stringify({
+        // Use standard Express response method
+        res.status(400).json({
           status: 'error',
           message
-        }));
-        res.end();
+        });
       } else {
         next(error);
       }

@@ -120,17 +120,11 @@ export class UserController {
         token: accessToken
       });
     } catch (error: any) {
-      // Use a direct approach to set the status without the 'Error:' prefix
-      // This bypasses Express's default behavior of adding 'Error:' to status messages
-      res.statusCode = 401;
-      res.setHeader('Content-Type', 'application/json');
-      // Use the raw http.ServerResponse.writeHead method to set the status message directly
-      (res as any).writeHead(401, 'Unauthorized');
-      res.write(JSON.stringify({
+      // Use standard Express response method
+      res.status(401).json({
         status: 'error',
         message: 'Invalid username or password'
-      }));
-      res.end();
+      });
     }
   }
 
