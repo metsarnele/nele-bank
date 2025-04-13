@@ -216,6 +216,24 @@ router.get('/', authenticate, (req, res) => transactionController.getTransaction
  *                 message:
  *                   type: string
  *                   example: 'Authentication token is missing'
+ *       403:
+ *         description: The accountFrom does not belong to the user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: ['error']
+ *                   example: 'error'
+ *                 message:
+ *                   type: string
+ *                   example: 'You do not have access to this account'
+ *             examples:
+ *               forbidden:
+ *                 value:
+ *                   error: 'Forbidden'
  *       404:
  *         description: Receiver not found
  *         content:

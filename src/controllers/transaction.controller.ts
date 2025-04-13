@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { TransactionService } from '../services/transaction.service';
 import { AccountService } from '../services/account.service';
 import { TransactionType } from '../interfaces/transaction.interface';
+import crypto from 'crypto';
 
 export class TransactionController {
   private static instance: TransactionController;
@@ -133,14 +134,54 @@ export class TransactionController {
 
   public async handleIncomingExternalTransfer(req: Request, res: Response): Promise<void> {
     try {
-      const transferData = req.body;
+      const { jwt } = req.body;
+      
+      if (!jwt) {
+        res.status(400).json({
+          status: 'error',
+          message: 'JWT token is required'
+        });
+        return;
+      }
 
-      await this.transactionService.handleIncomingExternalTransfer(transferData);
+      // Decode the JWT payload
+      try {
+        // Extract the payload part (second part) of the JWT
+        const parts = jwt.split('.');
+        if (parts.length !== 3) {
+          res.status(400).json({
+            status: 'error',
+            message: 'Invalid JWT format'
+          });
+          return;
+        }
 
-      res.status(200).json({
-        status: 'success',
-        message: 'Transaction processed successfully'
-      });
+        // Decode the base64 payload
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+        
+        // Construct the transaction data from the JWT payload
+        const transferData = {
+          transactionId: payload.transactionId || crypto.randomUUID(),
+          fromAccount: payload.accountFrom,
+          toAccount: payload.accountTo,
+          amount: payload.amount,
+          currency: payload.currency,
+          description: payload.explanation || payload.description,
+          signature: parts[2] // Use the signature part of the JWT
+        };
+
+        await this.transactionService.handleIncomingExternalTransfer(transferData);
+
+        res.status(200).json({
+          status: 'success',
+          message: 'Transaction processed successfully'
+        });
+      } catch (decodeError: any) {
+        res.status(400).json({
+          status: 'error',
+          message: `Error decoding JWT: ${decodeError.message}`
+        });
+      }
     } catch (error: any) {
       res.status(400).json({
         status: 'error',

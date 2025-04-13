@@ -21,7 +21,7 @@ export const internalTransferSchema = baseTransactionSchema.extend({
   fromAccountId: z.number().int('Account ID must be an integer'),
   toAccount: z.string()
     .min(1, 'Destination account number is required')
-    .max(20, 'Account number cannot exceed 20 characters'),
+    .max(50, 'Account number cannot exceed 50 characters'),
   type: z.literal('internal')
 });
 
@@ -29,7 +29,7 @@ export const externalTransferSchema = baseTransactionSchema.extend({
   fromAccountId: z.number().int('Account ID must be an integer'),
   toAccount: z.string()
     .min(1, 'Destination account number is required')
-    .max(20, 'Account number cannot exceed 20 characters'),
+    .max(50, 'Account number cannot exceed 50 characters'),
   toBankId: z.string()
     .min(1, 'Destination bank ID is required')
     .max(10, 'Bank ID cannot exceed 10 characters'),
@@ -37,13 +37,18 @@ export const externalTransferSchema = baseTransactionSchema.extend({
 });
 
 export const b2bTransactionSchema = z.object({
+  jwt: z.string().min(1, 'JWT token is required')
+});
+
+// Original schema kept for reference
+export const b2bTransactionPayloadSchema = z.object({
   transactionId: z.string().uuid('Invalid transaction ID'),
   fromAccount: z.string()
     .min(1, 'Source account number is required')
-    .max(20, 'Account number cannot exceed 20 characters'),
+    .max(50, 'Account number cannot exceed 50 characters'),
   toAccount: z.string()
     .min(1, 'Destination account number is required')
-    .max(20, 'Account number cannot exceed 20 characters'),
+    .max(50, 'Account number cannot exceed 50 characters'),
   amount: z.number()
     .positive('Amount must be positive')
     .min(0.01, 'Minimum transaction amount is 0.01'),

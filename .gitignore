@@ -49,4 +49,6 @@ Thumbs.db
 *.db
 
 # API Documentation
+
 openapi.json
+

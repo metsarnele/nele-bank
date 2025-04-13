@@ -25,7 +25,7 @@ export const createAccountSchema = z.object({
 export const accountBalanceSchema = z.object({
   accountNumber: z.string()
     .min(1, 'Account number is required')
-    .max(20, 'Account number cannot exceed 20 characters'),
+    .max(50, 'Account number cannot exceed 50 characters'),
   currency: currencySchema,
   balance: z.number()
     .min(0, 'Balance cannot be negative')
