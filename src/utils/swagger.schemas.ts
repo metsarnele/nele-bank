@@ -548,4 +548,79 @@ export const schemas: { [key: string]: OpenAPIV3.SchemaObject } = {
     }
   },
 
+  B2BTransaction: {
+    type: 'object',
+    required: ['jwt'],
+    properties: {
+      jwt: {
+        type: 'string',
+        description: 'JWT token containing the transaction details',
+        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50RnJvbSI6IjM1M2M4YjcyZTRhOWYxNWQzYjgyIiwiYWNjb3VudFRvIjoiTkVMRTI4MjM2MzY0NDk4MSIsImFtb3VudCI6MTUwLCJjdXJyZW5jeSI6IkVVUiIsImV4cGxhbmF0aW9uIjoiUGF5bWVudCBmb3Igc2VydmljZXMiLCJzZW5kZXJOYW1lIjoiSm9obiBEb2UiLCJpYXQiOjE3NDQ4MDY5OTl9.Yx-Yl_3i9RqHjyBFqnC4nTFMWMPxj2f6_Z7vvkgAIiI'
+      }
+    },
+    example: {
+      jwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50RnJvbSI6IjM1M2M4YjcyZTRhOWYxNWQzYjgyIiwiYWNjb3VudFRvIjoiTkVMRTI4MjM2MzY0NDk4MSIsImFtb3VudCI6MTUwLCJjdXJyZW5jeSI6IkVVUiIsImV4cGxhbmF0aW9uIjoiUGF5bWVudCBmb3Igc2VydmljZXMiLCJzZW5kZXJOYW1lIjoiSm9obiBEb2UiLCJpYXQiOjE3NDQ4MDY5OTl9.Yx-Yl_3i9RqHjyBFqnC4nTFMWMPxj2f6_Z7vvkgAIiI'
+    }
+  },
+
+  B2BTransactionPayload: {
+    type: 'object',
+    required: ['accountFrom', 'accountTo', 'amount', 'currency', 'explanation', 'senderName'],
+    properties: {
+      accountFrom: {
+        type: 'string',
+        description: 'Source account number',
+        example: '843eaf7076184bdb8b74faea17d1c3c3287'
+      },
+      accountTo: {
+        type: 'string',
+        description: 'Destination account number',
+        example: 'ABC123456'
+      },
+      amount: {
+        type: 'number',
+        minimum: 0.01,
+        description: 'Transfer amount',
+        example: 10000
+      },
+      currency: {
+        type: 'string',
+        enum: ['EUR', 'USD', 'GBP'],
+        description: 'Transaction currency',
+        example: 'EUR'
+      },
+      explanation: {
+        type: 'string',
+        description: 'Payment explanation',
+        example: 'Payment for services'
+      },
+      senderName: {
+        type: 'string',
+        description: 'Name of the sender',
+        example: 'John Doe'
+      }
+    }
+  },
+
+  B2BTransactionResponse: {
+    type: 'object',
+    required: ['receiverName', 'message'],
+    properties: {
+      receiverName: {
+        type: 'string',
+        description: 'Name of the receiving account holder',
+        example: 'Account Holder'
+      },
+      message: {
+        type: 'string',
+        description: 'Response message',
+        example: 'Transaction processed successfully'
+      }
+    },
+    example: {
+      receiverName: 'Account Holder',
+      message: 'Transaction processed successfully'
+    }
+  },
+
 };

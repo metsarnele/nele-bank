@@ -9,6 +9,7 @@ export interface IB2BTransactionPayload {
 
 export interface IB2BTransactionResponse {
   receiverName: string; // Name of the receiving account holder
+  message: string;     // Response message
 }
 
 export interface IB2BTransactionRequest {

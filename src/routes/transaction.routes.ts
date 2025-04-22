@@ -138,10 +138,10 @@ router.get('/', authenticate, (req, res) => transactionController.getTransaction
  *             - amount: Amount to transfer (> 0)
  *             - currency: Must be one of [EUR, USD, GBP]
  *             - type: 'internal' or 'external'
- *             
+ *
  *             For external transfers, also include:
  *             - toBankId: ID of the recipient's bank
- *             
+ *
  *             Note: For internal transfers, both accounts must use the same currency
  *     responses:
  *       201:
@@ -339,15 +339,9 @@ router.get('/jwks', (req, res) => jwksController.getJWKS(req, res));
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   enum: ["success"]
- *                 message:
- *                   type: string
+ *               $ref: '#/components/schemas/B2BTransactionResponse'
  *             example:
- *               status: 'success'
+ *               receiverName: 'Account Holder'
  *               message: 'Transaction processed successfully'
  *       400:
  *         description: Bad request
@@ -364,6 +358,7 @@ router.get('/jwks', (req, res) => jwksController.getJWKS(req, res));
  *             example:
  *               status: 'error'
  *               message: 'Parsing JWT payload failed: reason here'
+ *               receiverName: ''
  *       404:
  *         description: Account not found
  *         content:
@@ -378,6 +373,9 @@ router.get('/jwks', (req, res) => jwksController.getJWKS(req, res));
  *                 message:
  *                   type: string
  *                   example: 'Account not found'
+ *                 receiverName:
+ *                   type: string
+ *                   example: ''
  *       500:
  *         description: Server error occurred during transaction processing
  *         content:
@@ -392,6 +390,9 @@ router.get('/jwks', (req, res) => jwksController.getJWKS(req, res));
  *                 message:
  *                   type: string
  *                   example: 'Cannot verify your signature: The jwksUrl of your bank is missing'
+ *                 receiverName:
+ *                   type: string
+ *                   example: ''
  *       502:
  *         description: Central Bank error
  *         content:
@@ -406,6 +407,9 @@ router.get('/jwks', (req, res) => jwksController.getJWKS(req, res));
  *                 message:
  *                   type: string
  *                   example: 'Central Bank error: Service temporarily unavailable'
+ *                 receiverName:
+ *                   type: string
+ *                   example: ''
  */
 router.post('/b2b',
   validateRequest({ body: b2bTransactionSchema }),

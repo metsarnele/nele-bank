@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { TransactionService } from '../services/transaction.service';
 import { AccountService } from '../services/account.service';
-import { TransactionType } from '../interfaces/transaction.interface';
+import { ITransaction, TransactionType } from '../interfaces/transaction.interface';
 import crypto from 'crypto';
 
 export class TransactionController {
@@ -19,6 +19,45 @@ export class TransactionController {
       TransactionController.instance = new TransactionController();
     }
     return TransactionController.instance;
+  }
+
+  /**
+   * Format transaction response to match Swagger documentation
+   */
+  private async formatTransactionResponse(transaction: ITransaction): Promise<any> {
+    // Get source account number
+    let fromAccount = '';
+    if (transaction.fromAccountId && transaction.fromAccountId > 0) {
+      const sourceAccount = await this.accountService.getAccountBalance(transaction.fromAccountId);
+      if (sourceAccount) {
+        fromAccount = sourceAccount.accountNumber;
+      }
+    } else if (transaction.externalFromAccount) {
+      fromAccount = transaction.externalFromAccount;
+    }
+
+    // Get destination account number
+    let toAccount = '';
+    if (transaction.toAccountId) {
+      const destAccount = await this.accountService.getAccountBalance(transaction.toAccountId);
+      if (destAccount) {
+        toAccount = destAccount.accountNumber;
+      }
+    } else if (transaction.externalToAccount) {
+      toAccount = transaction.externalToAccount;
+    }
+
+    return {
+      transactionId: transaction.transactionId,
+      status: transaction.status,
+      amount: transaction.amount,
+      currency: transaction.currency,
+      fromAccount: fromAccount,
+      toAccount: toAccount,
+      description: transaction.description || '',
+      createdAt: transaction.createdAt.toISOString(),
+      completedAt: transaction.completedAt ? transaction.completedAt.toISOString() : undefined
+    };
   }
 
   public async createInternalTransfer(req: Request, res: Response): Promise<void> {
@@ -53,6 +92,16 @@ export class TransactionController {
         return;
       }
 
+      // Check if destination account exists
+      const destinationAccount = await this.accountService.getAccountByNumber(toAccount);
+      if (!destinationAccount) {
+        res.status(404).json({
+          status: 'error',
+          message: 'Destination account not found'
+        });
+        return;
+      }
+
       const transaction = await this.transactionService.createInternalTransfer({
         fromAccountId,
         toAccount,
@@ -61,12 +110,12 @@ export class TransactionController {
         description
       });
 
+      // Format the response to match Swagger documentation
+      const formattedTransaction = await this.formatTransactionResponse(transaction);
+
       res.status(201).json({
-        status: 'success',
-        data: {
-          id: transaction.id,
-          status: transaction.status
-        }
+        message: 'Transaction completed successfully',
+        transaction: formattedTransaction
       });
     } catch (error: any) {
       res.status(400).json({
@@ -117,12 +166,12 @@ export class TransactionController {
         description
       });
 
+      // Format the response to match Swagger documentation
+      const formattedTransaction = await this.formatTransactionResponse(transaction);
+
       res.status(201).json({
-        status: 'success',
-        data: {
-          id: transaction.id,
-          status: transaction.status
-        }
+        message: 'Transaction completed successfully',
+        transaction: formattedTransaction
       });
     } catch (error: any) {
       res.status(400).json({
@@ -135,11 +184,12 @@ export class TransactionController {
   public async handleIncomingExternalTransfer(req: Request, res: Response): Promise<void> {
     try {
       const { jwt } = req.body;
-      
+
       if (!jwt) {
         res.status(400).json({
           status: 'error',
-          message: 'JWT token is required'
+          message: 'JWT token is required',
+          receiverName: ''
         });
         return;
       }
@@ -151,41 +201,60 @@ export class TransactionController {
         if (parts.length !== 3) {
           res.status(400).json({
             status: 'error',
-            message: 'Invalid JWT format'
+            message: 'Invalid JWT format',
+            receiverName: ''
           });
           return;
         }
 
         // Decode the base64 payload
         const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-        
-        // Construct the transaction data from the JWT payload
+
+        // Log the payload for debugging
+        console.log('Decoded JWT payload:', payload);
+
+        // Construct the transaction data from the JWT payload according to Bank API v2 spec
         const transferData = {
           transactionId: payload.transactionId || crypto.randomUUID(),
           fromAccount: payload.accountFrom,
           toAccount: payload.accountTo,
           amount: payload.amount,
-          currency: payload.currency,
-          description: payload.explanation || payload.description,
+          currency: payload.currency || 'EUR', // Default to EUR if not specified
+          description: payload.description,
+          explanation: payload.explanation,
+          senderName: payload.senderName,
           signature: parts[2] // Use the signature part of the JWT
         };
 
+        // Process the transaction
         await this.transactionService.handleIncomingExternalTransfer(transferData);
 
+        // Get the receiver's name if available
+        let receiverName = 'Account Holder';
+        if (transferData.toAccount) {
+          const destinationAccount = await this.accountService.getAccountByNumber(transferData.toAccount);
+          if (destinationAccount && destinationAccount.user) {
+            receiverName = destinationAccount.user.name;
+          }
+        }
+
+        // Return response according to Bank API v2 spec
         res.status(200).json({
-          status: 'success',
+          receiverName: receiverName,
           message: 'Transaction processed successfully'
         });
       } catch (decodeError: any) {
         res.status(400).json({
           status: 'error',
-          message: `Error decoding JWT: ${decodeError.message}`
+          message: `Error decoding JWT: ${decodeError.message}`,
+          receiverName: ''
         });
       }
     } catch (error: any) {
       res.status(400).json({
         status: 'error',
-        message: error.message
+        message: error.message,
+        receiverName: ''
       });
     }
   }

@@ -67,7 +67,7 @@ export class B2BService {
       // Use environment variables for exchange rate API
       const apiUrl = process.env.EXCHANGE_RATE_API_URL || 'https://api.exchangerate-api.com/v4/latest';
       const apiKey = process.env.EXCHANGE_RATE_API_KEY || '';
-      
+
       const response = await axios.get(
         `${apiUrl}/${fromCurrency}`,
         {
@@ -171,7 +171,8 @@ export class B2BService {
         throw new Error('Failed to load receiver information');
       }
       return {
-        receiverName: receiver.user.name
+        receiverName: receiver.user.name,
+        message: 'Transaction processed successfully'
       };
     } catch (error) {
       transaction.status = TransactionStatus.FAILED;
