@@ -17,9 +17,9 @@ export interface ITransaction {
   status: TransactionStatus;
   amount: number;
   currency: string;
-  fromAccountId: number;
+  fromAccountId: number | null; // Can be null for external transfers
   toAccountId?: number;
-  fromUserId: number;
+  fromUserId: number | null; // Can be null for external transfers
   toUserId?: number;
   externalFromAccount?: string;
   externalToAccount?: string;
@@ -61,5 +61,7 @@ export interface IExternalTransactionRequest {
   amount: number;
   currency: string;
   description?: string;
+  explanation?: string;
+  senderName?: string;
   signature: string;
 }

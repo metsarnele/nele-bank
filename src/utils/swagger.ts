@@ -2,6 +2,24 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import { config } from '../config';
 import { schemas } from './swagger.schemas';
 import path from 'path';
+import fs from 'fs';
+
+// Determine if we're running from compiled JS or TS source
+const isCompiled = __filename.endsWith('.js');
+const srcDir = isCompiled ? path.resolve(__dirname, '..') : path.resolve(__dirname, '..');
+
+// Find all route files in the routes directory
+const routeFiles = [];
+const routesDir = path.join(srcDir, 'routes');
+
+if (fs.existsSync(routesDir)) {
+  const files = fs.readdirSync(routesDir);
+  for (const file of files) {
+    if (file.endsWith('.routes.ts') || file.endsWith('.routes.js')) {
+      routeFiles.push(path.join(routesDir, file));
+    }
+  }
+}
 
 const options: swaggerJsdoc.Options = {
   swaggerDefinition: {
@@ -24,6 +42,10 @@ const options: swaggerJsdoc.Options = {
       {
         url: '/api/v1',
         description: `${config.env === 'production' ? 'Production' : 'Development'} server`
+      },
+      {
+        url: '/',
+        description: 'Root server (no /api/v1 prefix)'
       }
     ],
     components: {
@@ -37,7 +59,8 @@ const options: swaggerJsdoc.Options = {
       }
     }
   },
-  apis: [path.resolve(__dirname, '../routes/*.routes.ts')] // Path to the API routes
+  apis: routeFiles // Use the dynamically found route files
 };
 
+console.log('Swagger API files:', routeFiles);
 export const swaggerSpec = swaggerJsdoc(options);

@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "nodemon",
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-routes.js",
     "test": "jest",
     "lint": "eslint . --ext .ts",
     "generate-keys": "ts-node scripts/generate-keys.ts",

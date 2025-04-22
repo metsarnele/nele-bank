@@ -122,6 +122,11 @@ export class TransactionService {
       });
     }
 
+    // Prevent transfers to the same account
+    if (fromAccount.id === toAccount.id) {
+      throw new ValidationError('Cannot transfer to the same account');
+    }
+
     const transaction = await Transaction.create({
       transactionId: crypto.randomUUID(),
       type: TransactionType.INTERNAL,
@@ -139,7 +144,7 @@ export class TransactionService {
 
     try {
       await this.updateBalances(fromAccount, toAccount, transferData.amount, TransactionType.INTERNAL);
-      
+
       transaction.status = TransactionStatus.COMPLETED;
       transaction.completedAt = new Date();
       await transaction.save();
@@ -178,7 +183,7 @@ export class TransactionService {
     try {
       // Since we've migrated to SQLite, we'll just process the transfer locally
       await this.updateBalances(fromAccount, null, transferData.amount, TransactionType.EXTERNAL);
-      
+
       transaction.status = TransactionStatus.COMPLETED;
       transaction.completedAt = new Date();
       await transaction.save();
@@ -192,8 +197,22 @@ export class TransactionService {
     }
   }
 
-  public async handleIncomingExternalTransfer(transferData: IExternalTransactionRequest): Promise<void> {
+  public async handleIncomingExternalTransfer(transferData: IExternalTransactionRequest): Promise<ITransaction> {
     // Since we've migrated to SQLite and simplified the app, we'll skip external bank verification
+    console.log('Processing incoming external transfer:', transferData);
+
+    // Validate required fields according to Bank API v2 spec
+    if (!transferData.fromAccount) {
+      throw new Error('Source account (accountFrom) is required');
+    }
+
+    if (!transferData.toAccount) {
+      throw new Error('Destination account (accountTo) is required');
+    }
+
+    if (!transferData.amount || transferData.amount <= 0) {
+      throw new Error('Amount must be greater than 0');
+    }
 
     const destinationAccount = await Account.findOne({
       where: { accountNumber: transferData.toAccount }
@@ -203,43 +222,55 @@ export class TransactionService {
       throw new Error('Destination account not found');
     }
 
-    if (destinationAccount.currency !== transferData.currency) {
+    // Use the currency from the transfer data, or the destination account's currency if not specified
+    const currency = transferData.currency || destinationAccount.currency;
+
+    if (destinationAccount.currency !== currency) {
       throw new Error('Currency mismatch');
     }
 
-    const transaction = await Transaction.create({
-      transactionId: transferData.transactionId,
-      type: TransactionType.EXTERNAL,
-      status: TransactionStatus.PENDING,
-      amount: transferData.amount,
-      currency: transferData.currency,
-      fromAccountId: 0, // Using 0 as a placeholder for external transfers
-      toAccountId: destinationAccount.id,
-      fromUserId: 0, // Using 0 as a placeholder for external transfers
-      toUserId: destinationAccount.userId,
-      externalFromAccount: transferData.fromAccount,
-      externalToAccount: undefined,
-      externalBankId: transferData.fromAccount.substring(0, 4),
-      description: transferData.description,
-      errorMessage: undefined,
-      completedAt: undefined,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
+    // Use explanation field from Bank API v2 spec as the description if available
+    const description = transferData.explanation || transferData.description || `Payment from ${transferData.senderName || 'external account'}`;
 
     try {
-      // Update destination account balance
-      await destinationAccount.increment('balance', { by: transferData.amount });
+      // Create transaction data with null for foreign key fields that don't exist
+      const transactionData: any = {
+        transactionId: transferData.transactionId || crypto.randomUUID(),
+        type: TransactionType.EXTERNAL,
+        status: TransactionStatus.PENDING,
+        amount: transferData.amount,
+        currency: currency, // Use the validated currency
+        fromAccountId: null, // Use null instead of 0 for external transfers
+        toAccountId: destinationAccount.id,
+        fromUserId: null, // Use null instead of 0 for external transfers
+        toUserId: destinationAccount.userId,
+        externalFromAccount: transferData.fromAccount,
+        externalBankId: transferData.fromAccount.substring(0, 4),
+        description: description,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
 
+      console.log('Creating transaction with data:', transactionData);
+
+      const transaction = await Transaction.create(transactionData);
+
+      // Update the destination account balance
+      destinationAccount.balance += transferData.amount;
+      await destinationAccount.save();
+
+      // Update the transaction status
       transaction.status = TransactionStatus.COMPLETED;
       transaction.completedAt = new Date();
       await transaction.save();
+
+      return transaction;
     } catch (error) {
-      transaction.status = TransactionStatus.FAILED;
-      transaction.errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      await transaction.save();
-      throw error instanceof Error ? error : new Error('An unknown error occurred');
+      console.error('Error creating transaction:', error);
+      throw error;
     }
+
+    // The transaction has already been created and the balance updated in the try block above
   }
 
   public async getTransactionHistory(userId: number): Promise<ITransaction[]> {
@@ -252,7 +283,7 @@ export class TransactionService {
       },
       order: [['createdAt', 'DESC']]
     });
-    
+
     return transactions.map(tx => this.toTransactionResponse(tx));
   }
 

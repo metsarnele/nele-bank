@@ -40,93 +40,31 @@ app.get('/', (req, res) => {
   res.redirect('/docs');
 });
 
+// Serve Swagger spec as JSON
+app.get('/docs/swagger.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+// Also serve Swagger spec at /nele-bank path
+app.get('/nele-bank/docs/swagger.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
 // Swagger documentation
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: `${config.bank.name} - API Documentation`,
-  swaggerOptions: {
-    url: '/docs/swagger.json'
-  }
+  explorer: true
 }));
 
 // Also serve Swagger UI at /nele-bank/docs
 app.use('/nele-bank/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: `${config.bank.name} - API Documentation`,
-  swaggerOptions: {
-    url: '/nele-bank/docs/swagger.json'
-  }
+  explorer: true
 }));
-
-// Serve Swagger spec as JSON with custom modifications
-app.get('/docs/swagger.json', (req, res) => {
-  // Create a deep copy of the swagger spec
-  const customSpec = JSON.parse(JSON.stringify(swaggerSpec));
-  
-  // Log all paths to see what's available
-  console.log('Available paths in Swagger spec:', Object.keys(customSpec.paths || {}));
-  
-  // Try all possible session path formats
-  const possiblePaths = ['/sessions', 'sessions', '/api/v1/sessions', '/nele-bank/api/v1/sessions'];
-  
-  // Check each possible path
-  for (const path of possiblePaths) {
-    if (customSpec.paths && customSpec.paths[path] && customSpec.paths[path].post) {
-      console.log(`Found sessions endpoint at path: ${path}`);
-      const postSessions = customSpec.paths[path].post;
-      
-      // Update the 400 error description
-      if (postSessions.responses && postSessions.responses['400']) {
-        console.log(`Updating 400 description for ${path}`);
-        postSessions.responses['400'].description = 'Bad Request';
-      }
-      
-      // Update the 401 error description
-      if (postSessions.responses && postSessions.responses['401']) {
-        console.log(`Updating 401 description for ${path}`);
-        postSessions.responses['401'].description = 'Unauthorized';
-      }
-    }
-  }
-  
-  res.setHeader('Content-Type', 'application/json');
-  res.send(customSpec);
-});
-
-// Also serve Swagger spec at /nele-bank path with custom modifications
-app.get('/nele-bank/docs/swagger.json', (req, res) => {
-  // Create a deep copy of the swagger spec
-  const customSpec = JSON.parse(JSON.stringify(swaggerSpec));
-  
-  // Log all paths to see what's available
-  console.log('Available paths in Swagger spec (nele-bank):', Object.keys(customSpec.paths || {}));
-  
-  // Try all possible session path formats
-  const possiblePaths = ['/sessions', 'sessions', '/api/v1/sessions', '/nele-bank/api/v1/sessions'];
-  
-  // Check each possible path
-  for (const path of possiblePaths) {
-    if (customSpec.paths && customSpec.paths[path] && customSpec.paths[path].post) {
-      console.log(`Found sessions endpoint at path (nele-bank): ${path}`);
-      const postSessions = customSpec.paths[path].post;
-      
-      // Update the 400 error description
-      if (postSessions.responses && postSessions.responses['400']) {
-        console.log(`Updating 400 description for ${path} (nele-bank)`);
-        postSessions.responses['400'].description = 'Bad Request';
-      }
-      
-      // Update the 401 error description
-      if (postSessions.responses && postSessions.responses['401']) {
-        console.log(`Updating 401 description for ${path} (nele-bank)`);
-        postSessions.responses['401'].description = 'Unauthorized';
-      }
-    }
-  }
-  
-  res.setHeader('Content-Type', 'application/json');
-  res.send(customSpec);
-});
 
 // Error handling
 app.use(errorHandler);

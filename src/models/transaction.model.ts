@@ -71,7 +71,7 @@ Transaction.init({
   },
   fromAccountId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true, // Allow null for external transfers
     references: {
       model: 'accounts',
       key: 'id'
@@ -86,7 +86,7 @@ Transaction.init({
   },
   fromUserId: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true, // Allow null for external transfers
     references: {
       model: 'users',
       key: 'id'
