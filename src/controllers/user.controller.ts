@@ -1,9 +1,12 @@
 import { Request, Response } from 'express';
 import { UserService } from '../services/user.service';
 import { AccountService } from '../services/account.service';
+import { TokenBlacklistService } from '../services/token-blacklist.service';
+import { AuthService } from '../services/auth.service';
 import { IUser } from '../interfaces/user.interface';
 import { ReasonPhrases } from 'http-status-codes';
 import http from 'http';
+import jwt from 'jsonwebtoken';
 
 export class UserController {
   private static instance: UserController;
@@ -161,11 +164,32 @@ export class UserController {
   }
 
   public async logout(req: Request, res: Response): Promise<void> {
-    // Since we're using JWT tokens, we don't need to do anything server-side
-    // The client should remove the tokens from their storage
-    res.status(200).json({
-      status: 'success',
-      message: 'Successfully logged out'
-    });
+    try {
+      // Get the token from the authorization header
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+
+        // Verify the token to get its payload
+        const authService = AuthService.getInstance();
+        const decoded = await authService.verifyToken(token) as jwt.JwtPayload;
+
+        // Add the token to the blacklist
+        const tokenBlacklistService = TokenBlacklistService.getInstance();
+        tokenBlacklistService.addToBlacklist(token, decoded);
+      }
+
+      res.status(200).json({
+        status: 'success',
+        message: 'Successfully logged out'
+      });
+    } catch (error) {
+      // Even if there's an error with the token, we still want to return success
+      // as the client will remove the token from storage
+      res.status(200).json({
+        status: 'success',
+        message: 'Successfully logged out'
+      });
+    }
   }
 }

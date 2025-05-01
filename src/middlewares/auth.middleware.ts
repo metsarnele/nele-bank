@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
+import { TokenBlacklistService } from '../services/token-blacklist.service';
 import { User } from '../models/user.model';
 import jwt from 'jsonwebtoken';
 
@@ -23,6 +24,16 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
 
     const token = authHeader.split(' ')[1];
     const authService = AuthService.getInstance();
+    const tokenBlacklistService = TokenBlacklistService.getInstance();
+
+    // Check if token is blacklisted (user has logged out)
+    if (tokenBlacklistService.isBlacklisted(token)) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Token has been invalidated'
+      });
+    }
+
     const decoded = await authService.verifyToken(token) as jwt.JwtPayload;
 
     if (!decoded.sub || typeof decoded.sub !== 'number') {
