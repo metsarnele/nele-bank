@@ -623,4 +623,92 @@ export const schemas: { [key: string]: OpenAPIV3.SchemaObject } = {
     }
   },
 
+  UserProfile: {
+    type: 'object',
+    required: ['status', 'data'],
+    properties: {
+      status: {
+        type: 'string',
+        enum: ['success'],
+        description: 'Response status',
+        example: 'success'
+      },
+      data: {
+        type: 'object',
+        required: ['user', 'accounts'],
+        properties: {
+          user: {
+            type: 'object',
+            required: ['id', 'name', 'username'],
+            properties: {
+              id: {
+                type: 'integer',
+                description: 'User ID',
+                example: 5
+              },
+              name: {
+                type: 'string',
+                description: 'User full name',
+                example: 'Miki Hiir'
+              },
+              username: {
+                type: 'string',
+                description: 'Username',
+                example: 'miki'
+              }
+            }
+          },
+          accounts: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['id', 'accountNumber', 'currency', 'balance'],
+              properties: {
+                id: {
+                  type: 'integer',
+                  description: 'Account ID',
+                  example: 5
+                },
+                accountNumber: {
+                  type: 'string',
+                  description: 'Account number',
+                  example: '300113729391066'
+                },
+                currency: {
+                  type: 'string',
+                  enum: ['EUR', 'USD', 'GBP'],
+                  description: 'Account currency',
+                  example: 'EUR'
+                },
+                balance: {
+                  type: 'number',
+                  description: 'Account balance',
+                  example: 100
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    example: {
+      status: 'success',
+      data: {
+        user: {
+          id: 5,
+          name: 'Miki Hiir',
+          username: 'miki'
+        },
+        accounts: [
+          {
+            id: 5,
+            accountNumber: '300113729391066',
+            currency: 'EUR',
+            balance: 100
+          }
+        ]
+      }
+    }
+  },
+
 };

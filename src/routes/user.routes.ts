@@ -110,7 +110,7 @@ router.post('/',
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Account'
+ *               $ref: '#/components/schemas/UserProfile'
  *       401:
  *         description: Not authenticated
  *         content:
