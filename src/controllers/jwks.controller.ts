@@ -15,13 +15,31 @@ export class JWKSController {
     return JWKSController.instance;
   }
 
-  public async getJWKS(req: Request, res: Response): Promise<void> {
+  public async getJWKS(req: Request, res: Response): Promise<Response | void> {
     try {
       // Read the public key file
-      const publicKeyPem = await fs.readFile(config.bank.publicKeyPath, 'utf8');
+      let publicKeyPem;
+      try {
+        publicKeyPem = await fs.readFile(config.bank.publicKeyPath, 'utf8');
+      } catch (fileError) {
+        console.error(`Could not read public key file at ${config.bank.publicKeyPath}:`, fileError);
+        return res.status(500).json({
+          status: 'error',
+          message: 'Public key file not found or inaccessible'
+        });
+      }
       
       // Convert PEM to KeyObject
-      const publicKey = createPublicKey(publicKeyPem);
+      let publicKey;
+      try {
+        publicKey = createPublicKey(publicKeyPem);
+      } catch (cryptoError) {
+        console.error('Invalid public key format:', cryptoError);
+        return res.status(500).json({
+          status: 'error',
+          message: 'Invalid public key format'
+        });
+      }
       
       // Get the key details
       const keyDetails = publicKey.export({ format: 'jwk' });

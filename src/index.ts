@@ -2,9 +2,13 @@ import app from './app';
 import { config } from './config';
 import { connectToDatabase } from './services/database.service';
 import { initializeDatabase } from './services/init-db';
+import { ensureKeysExist } from './utils/key-manager';
 
 const startServer = async () => {
   try {
+    // Ensure RSA keys exist for JWKS endpoint
+    await ensureKeysExist();
+    
     // Initialize database connection
     await connectToDatabase();
 
