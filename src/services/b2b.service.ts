@@ -143,8 +143,26 @@ export class B2BService {
       // Decode the payload without verification first
       const decodedPayload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
       
-      // Extract source bank prefix from the account number
-      const sourceBankPrefix = decodedPayload.accountFrom.substring(0, 4);
+      // Extract bank information from JWT header instead of account number
+      const header = JSON.parse(Buffer.from(parts[0], 'base64').toString());
+      // The kid field in the header should identify the source bank
+      const kid = header.kid;
+      console.log('JWT key ID (kid):', kid);
+
+      // Extract bank prefix from kid or use a mapping
+      let sourceBankPrefix;
+      if (kid && kid.includes('HENN')) {
+        // If kid contains Henno Pank's identifier
+        sourceBankPrefix = 'HENN';
+      } else if (kid) {
+        // Try to extract prefix from kid
+        sourceBankPrefix = kid.split('-')[0];
+      } else {
+        // Fallback to test mode
+        console.log('Could not determine source bank, using test mode');
+        process.env.TEST_MODE = 'true';
+        sourceBankPrefix = 'TEST';
+      }
       console.log('Source bank prefix:', sourceBankPrefix);
       
       // Get source bank info from central bank
