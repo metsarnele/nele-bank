@@ -6,6 +6,7 @@ import swaggerUi from 'swagger-ui-express';
 import { config } from './config';
 import routes from './routes';
 import jwksRoutes from './routes/jwks.routes';
+import { JWKSController } from './controllers/jwks.controller';
 import { swaggerSpec } from './utils/swagger';
 import { errorHandler } from './middlewares/error.middleware';
 import { customResponseMiddleware } from './middlewares/response.middleware';
@@ -70,7 +71,11 @@ app.use('/nele-bank/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 // JWKS routes for public key distribution
 // These need to be registered at /.well-known path as per standard
 app.use('/.well-known', jwksRoutes);
-app.use('/nele-bank/.well-known', jwksRoutes);
+// For the /nele-bank prefix, we need to ensure no double slashes
+const jwksController = JWKSController.getInstance();
+app.use('/nele-bank/.well-known/jwks.json', (req, res) => jwksController.getJWKS(req, res));
+// Also support direct access to the JWKS endpoint
+app.get('/jwks.json', (req, res) => jwksController.getJWKS(req, res));
 
 // Error handling
 app.use(errorHandler);
