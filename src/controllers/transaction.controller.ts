@@ -194,66 +194,40 @@ export class TransactionController {
         return;
       }
 
-      // Decode the JWT payload
       try {
-        // Extract the payload part (second part) of the JWT
-        const parts = jwt.split('.');
-        if (parts.length !== 3) {
+        // Use B2B service to process the transaction
+        // This will handle JWT verification, account validation, and transaction processing
+        const b2bService = await import('../services/b2b.service').then(m => m.B2BService.getInstance());
+        const result = await b2bService.processIncomingTransaction({ jwt });
+        
+        // Return success response
+        res.status(200).json({
+          receiverName: result.receiverName,
+          message: result.message
+        });
+      } catch (processingError: any) {
+        console.error('Error processing B2B transaction:', processingError);
+        
+        // Determine if this is a JWT validation error
+        if (processingError.message && processingError.message.includes('JWT')) {
           res.status(400).json({
             status: 'error',
-            message: 'Invalid JWT format',
+            message: `Error decoding JWT: ${processingError.message}`,
             receiverName: ''
           });
-          return;
+        } else {
+          res.status(400).json({
+            status: 'error',
+            message: processingError.message,
+            receiverName: ''
+          });
         }
-
-        // Decode the base64 payload
-        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-
-        // Log the payload for debugging
-        console.log('Decoded JWT payload:', payload);
-
-        // Construct the transaction data from the JWT payload according to Bank API v2 spec
-        const transferData = {
-          transactionId: payload.transactionId || crypto.randomUUID(),
-          fromAccount: payload.accountFrom,
-          toAccount: payload.accountTo,
-          amount: payload.amount,
-          currency: payload.currency || 'EUR', // Default to EUR if not specified
-          description: payload.description,
-          explanation: payload.explanation,
-          senderName: payload.senderName,
-          signature: parts[2] // Use the signature part of the JWT
-        };
-
-        // Process the transaction
-        await this.transactionService.handleIncomingExternalTransfer(transferData);
-
-        // Get the receiver's name if available
-        let receiverName = 'Account Holder';
-        if (transferData.toAccount) {
-          const destinationAccount = await this.accountService.getAccountByNumber(transferData.toAccount);
-          if (destinationAccount && destinationAccount.user) {
-            receiverName = destinationAccount.user.name;
-          }
-        }
-
-        // Return response according to Bank API v2 spec
-        res.status(200).json({
-          receiverName: receiverName,
-          message: 'Transaction processed successfully'
-        });
-      } catch (decodeError: any) {
-        res.status(400).json({
-          status: 'error',
-          message: `Error decoding JWT: ${decodeError.message}`,
-          receiverName: ''
-        });
       }
     } catch (error: any) {
-      res.status(400).json({
+      console.error('Unexpected error in handleIncomingExternalTransfer:', error);
+      res.status(500).json({
         status: 'error',
-        message: error.message,
+        message: 'Internal server error processing transaction',
         receiverName: ''
       });
     }

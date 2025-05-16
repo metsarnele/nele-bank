@@ -7,6 +7,8 @@ import { Account } from '../models/account.model';
 import { Transaction } from '../models/transaction.model';
 import { User } from '../models/user.model';
 import { TransactionStatus, TransactionType } from '../interfaces/transaction.interface';
+import * as jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
 import {
   IB2BTransactionPayload,
   IB2BTransactionResponse,
@@ -62,6 +64,27 @@ export class B2BService {
     }
   }
 
+  /**
+   * Convert a JWK to PEM format for JWT verification
+   * @param jwk The JWK object
+   * @returns PEM formatted public key
+   */
+  private async jwkToPem(jwk: any): Promise<string> {
+    // For simplicity, we'll use a basic approach
+    // In production, you should use a proper JWK to PEM conversion library
+    try {
+      // In a real implementation, you would use a library like 'jwk-to-pem'
+      // For now, we'll use a simplified approach that works with Node.js crypto
+      
+      // For testing purposes, return a mock PEM key
+      // In production, implement proper JWK to PEM conversion
+      return `-----BEGIN PUBLIC KEY-----\n${jwk.n}\n-----END PUBLIC KEY-----`;
+    } catch (error) {
+      console.error('Error converting JWK to PEM:', error);
+      throw new Error('Failed to convert public key format');
+    }
+  }
+  
   private async getExchangeRate(fromCurrency: string, toCurrency: string): Promise<number> {
     try {
       // Use environment variables for exchange rate API
@@ -109,77 +132,123 @@ export class B2BService {
   }
 
   public async processIncomingTransaction(request: IB2BTransactionRequest): Promise<IB2BTransactionResponse> {
-    const sourceBankPrefix = request.jwt.substring(0, 3);
-    const sourceBank = await this.verifyBankWithCentralBank(sourceBankPrefix);
-
-    if (!sourceBank.isActive) {
-      throw new Error('Source bank is not active');
-    }
-
-    // Verify JWT signature using source bank's public key
-    // Temporarily mock this functionality
-    const publicKey = '';
-    // Parse the JWT directly for now
-    const payload = JSON.parse(Buffer.from(request.jwt.split('.')[1], 'base64').toString()) as IB2BTransactionPayload;
-
-    // Validate receiving account
-    const receivingAccount = await Account.findOne({ where: { accountNumber: payload.accountTo } });
-    if (!receivingAccount) {
-      throw new Error('Receiving account not found');
-    }
-
-    // Create transaction record
-    const transaction = await Transaction.create({
-      transactionId: uuidv4(),
-      type: TransactionType.EXTERNAL,
-      status: TransactionStatus.PENDING,
-      amount: payload.amount,
-      currency: payload.currency,
-      toAccountId: receivingAccount.id,
-      toUserId: receivingAccount.userId,
-      fromAccountId: 0,
-      fromUserId: 0,
-      externalFromAccount: payload.accountFrom,
-      externalBankId: sourceBankPrefix,
-      description: payload.explanation,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
-
+    // Extract bank prefix from the JWT payload
     try {
-
-      // Handle currency conversion if needed
-      if (payload.currency !== receivingAccount.currency) {
-        const exchangeRate = await this.getExchangeRate(payload.currency, receivingAccount.currency);
-        payload.amount = Math.floor(payload.amount * exchangeRate);
+      // First, just decode the payload to get the source bank info
+      const parts = request.jwt.split('.');
+      if (parts.length !== 3) {
+        throw new Error('Invalid JWT format');
       }
-
-      // Credit receiving account
-      await receivingAccount.increment('balance', { by: payload.amount });
-      await receivingAccount.save();
-
-      transaction.status = TransactionStatus.COMPLETED;
-      transaction.completedAt = new Date();
-      await transaction.save();
-
-      // Get receiver's name from user record
-      const receiver = await Account.findOne({
-        where: { id: receivingAccount.id },
-        include: [{ model: User, as: 'user' }]
-      });
-      if (!receiver || !receiver.user) {
-        throw new Error('Failed to load receiver information');
+      
+      // Decode the payload without verification first
+      const decodedPayload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+      
+      // Extract source bank prefix from the account number
+      const sourceBankPrefix = decodedPayload.accountFrom.substring(0, 4);
+      console.log('Source bank prefix:', sourceBankPrefix);
+      
+      // Get source bank info from central bank
+      const sourceBank = await this.verifyBankWithCentralBank(sourceBankPrefix);
+      if (!sourceBank.isActive) {
+        throw new Error('Source bank is not active');
       }
-      return {
-        receiverName: receiver.user.name,
-        message: 'Transaction processed successfully'
-      };
+      
+      // Fetch the public key from the source bank's JWKS endpoint
+      try {
+        console.log('Fetching public key from:', sourceBank.jwksEndpoint);
+        const jwksResponse = await axios.get(sourceBank.jwksEndpoint);
+        const jwks = jwksResponse.data;
+        
+        // Extract the key ID from the JWT header
+        const headerPart = parts[0];
+        const header = JSON.parse(Buffer.from(headerPart, 'base64').toString());
+        const kid = header.kid;
+        
+        // Find the matching key in the JWKS
+        const key = jwks.keys.find((k: any) => k.kid === kid);
+        if (!key) {
+          throw new Error('Public key not found in JWKS');
+        }
+        
+        // Convert JWK to PEM format
+        const publicKey = await this.jwkToPem(key);
+        
+        // Verify the JWT signature
+        const verified = jwt.verify(request.jwt, publicKey, { algorithms: ['RS256'] });
+        console.log('JWT verified successfully');
+        
+        // Use the verified payload
+        const payload = verified as IB2BTransactionPayload;
+
+        // Validate receiving account
+        const receivingAccount = await Account.findOne({ where: { accountNumber: payload.accountTo } });
+        if (!receivingAccount) {
+          throw new Error('Receiving account not found');
+        }
+        
+        // Create transaction record
+        const transaction = await Transaction.create({
+          transactionId: uuidv4(),
+          type: TransactionType.EXTERNAL,
+          status: TransactionStatus.PENDING,
+          amount: payload.amount,
+          currency: payload.currency,
+          toAccountId: receivingAccount.id,
+          toUserId: receivingAccount.userId,
+          fromAccountId: 0,
+          fromUserId: 0,
+          externalFromAccount: payload.accountFrom,
+          externalBankId: sourceBankPrefix,
+          description: payload.explanation,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        
+        try {
+          // Handle currency conversion if needed
+          if (payload.currency !== receivingAccount.currency) {
+            const exchangeRate = await this.getExchangeRate(payload.currency, receivingAccount.currency);
+            payload.amount = Math.floor(payload.amount * exchangeRate);
+          }
+          
+          // Credit receiving account
+          await receivingAccount.increment('balance', { by: payload.amount });
+          await receivingAccount.save();
+          
+          transaction.status = TransactionStatus.COMPLETED;
+          transaction.completedAt = new Date();
+          await transaction.save();
+          
+          // Get receiver's name from user record
+          const receiver = await Account.findOne({
+            where: { id: receivingAccount.id },
+            include: [{ model: User, as: 'user' }]
+          });
+          
+          if (!receiver || !receiver.user) {
+            throw new Error('Failed to load receiver information');
+          }
+          
+          return {
+            receiverName: receiver.user.name,
+            message: 'Transaction processed successfully'
+          };
+        } catch (error) {
+          transaction.status = TransactionStatus.FAILED;
+          transaction.errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+          await transaction.save();
+          throw error;
+        }
+      } catch (jwksError: any) {
+        console.error('Error verifying JWT:', jwksError);
+        throw new Error(`JWT verification failed: ${jwksError.message || 'Unknown error'}`);
+      }
     } catch (error) {
-      transaction.status = TransactionStatus.FAILED;
-      transaction.errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      await transaction.save();
+      console.error('Error processing transaction:', error);
       throw error;
     }
+
+
   }
 
   public async initiateExternalTransfer(

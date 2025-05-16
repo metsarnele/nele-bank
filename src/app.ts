@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import { config } from './config';
 import routes from './routes';
+import jwksRoutes from './routes/jwks.routes';
 import { swaggerSpec } from './utils/swagger';
 import { errorHandler } from './middlewares/error.middleware';
 import { customResponseMiddleware } from './middlewares/response.middleware';
@@ -65,6 +66,11 @@ app.use('/nele-bank/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: `${config.bank.name} - API Documentation`,
   explorer: true
 }));
+
+// JWKS routes for public key distribution
+// These need to be registered at /.well-known path as per standard
+app.use('/.well-known', jwksRoutes);
+app.use('/nele-bank/.well-known', jwksRoutes);
 
 // Error handling
 app.use(errorHandler);
