@@ -139,43 +139,37 @@ export class TransactionController {
       }
       
       // Get the destination bank ID
-      let targetBankId = toBankId;
+      const targetBankId = toBankId;
       
-      // If bank ID is not provided, we need to determine it
+      // Bank ID is required for external transfers according to the requirements
       if (!targetBankId) {
-        console.log('Bank ID not provided, attempting to determine from account number:', toAccount);
-        
-        // In a real banking system, we would query the Central Bank's registry
-        // to determine which bank an account belongs to
-        
-        // For Henno Bank, we know their accounts start with '61cb'
-        if (toAccount.startsWith('61cb')) {
-          targetBankId = 'HENN'; // Henno Bank
-          console.log('Determined bank ID for Henno Bank:', targetBankId);
-        } else {
-          // For other banks, we require the toBankId to be explicitly provided
-          // This is because account number formats vary and may not contain identifiable prefixes
-          res.status(400).json({
-            status: 'error',
-            message: 'Could not determine destination bank. Please provide toBankId parameter.'
-          });
-          return;
-        }
+        res.status(400).json({
+          status: 'error',
+          message: 'Bank ID (toBankId) is required for external transfers'
+        });
+        return;
       }
       
-      // Validate the bank ID with the Central Bank
+      // Verify the bank ID with the Central Bank
       try {
-        // In production, we would verify the bank ID with the Central Bank
-        // For now, we'll just log it
-        console.log('Using bank ID for external transfer:', targetBankId);
+        // We'll use the B2B service to verify the bank with the Central Bank
+        const b2bService = await import('../services/b2b.service').then(m => m.B2BService.getInstance());
+        
+        console.log(`Verifying bank ${targetBankId} with Central Bank`);
+        
+        // This will throw an error if the bank is not registered or not active
+        await b2bService.verifyBankWithCentralBank(targetBankId);
       } catch (error) {
-        console.error('Error verifying bank ID with Central Bank:', error);
+        console.error('Error verifying bank with Central Bank:', error);
         res.status(400).json({
           status: 'error',
           message: 'Invalid bank ID or bank not registered with Central Bank'
         });
         return;
       }
+      
+      // Bank ID has been verified with the Central Bank
+      console.log('Using verified bank ID for external transfer:', targetBankId);
 
       // Validate amount
       if (amount <= 0) {

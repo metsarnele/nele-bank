@@ -30,10 +30,7 @@ export const externalTransferSchema = baseTransactionSchema.extend({
   toAccount: z.string()
     .min(1, 'Destination account number is required')
     .max(50, 'Account number cannot exceed 50 characters'),
-  toBankId: z.string()
-    .min(1, 'Destination bank ID is required')
-    .max(10, 'Bank ID cannot exceed 10 characters')
-    .optional(), // Make toBankId optional
+  // toBankId is now handled automatically by the controller
   type: z.literal('external')
 });
 

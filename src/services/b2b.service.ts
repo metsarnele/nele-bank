@@ -35,7 +35,7 @@ export class B2BService {
     return B2BService.instance;
   }
 
-  private async verifyBankWithCentralBank(bankPrefix: string): Promise<IBankVerificationResponse> {
+  public async verifyBankWithCentralBank(bankPrefix: string): Promise<IBankVerificationResponse> {
     try {
       // Mock response for testing
       if (process.env.TEST_MODE === 'true') {
