@@ -276,50 +276,147 @@ export class B2BService {
     currency: string,
     explanation: string
   ): Promise<void> {
-    // Extract destination bank prefix
-    const destinationBankPrefix = toAccount.substring(0, 3);
-    const destinationBank = await this.verifyBankWithCentralBank(destinationBankPrefix);
-
-    if (!destinationBank.isActive) {
-      throw new Error('Destination bank is not active');
-    }
-
-    // Get sender's account and name
-    const senderAccount = await Account.findOne({
-      where: { accountNumber: fromAccount },
-      include: [{ model: User, as: 'user' }]
-    });
-    if (!senderAccount) {
-      throw new Error('Sender account not found');
-    }
-
-    // Create transaction payload
-    const payload: IB2BTransactionPayload = {
-      accountFrom: fromAccount,
-      accountTo: toAccount,
-      currency,
-      amount,
-      explanation,
-      senderName: senderAccount.user ? senderAccount.user.name : 'Unknown'
-    };
-
-    // Sign the payload
-    // Temporarily mock JWT signing
-    const jwt = JSON.stringify(payload);
-
-    // Send to destination bank
     try {
-      await axios.post(
-        destinationBank.transactionEndpoint,
-        { jwt },
-        {
-          headers: {
-            'Authorization': `Bearer ${config.centralBank.apiKey}`
-          }
+      console.log('Initiating external transfer:', { fromAccount, toAccount, amount, currency });
+      
+      // Extract destination bank prefix from the destination account or bank ID
+      // Try different strategies to identify the bank
+      let destinationBankPrefix;
+      
+      // Strategy 1: Check if the account has a known format with bank prefix
+      if (toAccount.includes('HENN')) {
+        destinationBankPrefix = 'HENN';
+      } 
+      // Strategy 2: For Henno Bank's specific account format
+      else if (toAccount.startsWith('61cb')) {
+        destinationBankPrefix = 'HENN';
+      }
+      // Default fallback
+      else {
+        // If we can't determine the bank prefix, use a configuration mapping
+        // This could be expanded to a more comprehensive bank identification system
+        const bankPrefixMap: Record<string, string> = {
+          '61cb': 'HENN', // Henno Bank accounts often start with this
+          '300': 'NELE'   // Your bank's accounts
+        };
+        
+        // Try to match the start of the account number with known patterns
+        const matchedPrefix = Object.keys(bankPrefixMap).find(prefix => 
+          toAccount.startsWith(prefix)
+        );
+        
+        if (matchedPrefix) {
+          destinationBankPrefix = bankPrefixMap[matchedPrefix];
+        } else {
+          throw new Error('Could not determine destination bank from account number');
         }
-      );
+      }
+      
+      console.log('Determined destination bank prefix:', destinationBankPrefix);
+      
+      // Get destination bank info from Central Bank
+      let destinationBank;
+      try {
+        destinationBank = await this.verifyBankWithCentralBank(destinationBankPrefix);
+        console.log('Destination bank info:', destinationBank);
+      } catch (error) {
+        console.error('Failed to verify destination bank:', error);
+        // If in test mode, use mock destination bank
+        if (process.env.TEST_MODE === 'true') {
+          console.log('Using test mode for destination bank');
+          destinationBank = {
+            name: 'Henno Pank',
+            prefix: 'HENN',
+            transactionEndpoint: 'https://henno.cfd/henno-pank/api/v1/transactions/b2b',
+            jwksEndpoint: 'https://henno.cfd/henno-pank/.well-known/jwks.json',
+            isActive: true
+          };
+        } else {
+          throw new Error('Destination bank verification failed');
+        }
+      }
+
+      if (!destinationBank.isActive) {
+        throw new Error('Destination bank is not active');
+      }
+
+      // Get sender's account and name
+      const senderAccount = await Account.findOne({
+        where: { accountNumber: fromAccount },
+        include: [{ model: User, as: 'user' }]
+      });
+      if (!senderAccount) {
+        throw new Error('Sender account not found');
+      }
+
+      // Create transaction payload according to the expected format
+      const payload = {
+        accountFrom: fromAccount,
+        accountTo: toAccount,
+        currency,
+        amount,
+        explanation,
+        senderName: senderAccount.user ? senderAccount.user.name : 'Unknown'
+      };
+      
+      console.log('Transaction payload:', payload);
+
+      // Load private key for signing
+      const fs = require('fs');
+      const path = require('path');
+      const privateKeyPath = path.resolve(config.bank.privateKeyPath);
+      console.log('Loading private key from:', privateKeyPath);
+      
+      let privateKey;
+      try {
+        privateKey = fs.readFileSync(privateKeyPath, 'utf8');
+        console.log('Private key loaded successfully');
+      } catch (error) {
+        console.error('Failed to load private key:', error);
+        throw new Error('Failed to load private key for JWT signing');
+      }
+
+      // Sign the payload using jsonwebtoken
+      const jwt = require('jsonwebtoken');
+      const signedJwt = jwt.sign(payload, privateKey, { 
+        algorithm: 'RS256',
+        header: {
+          alg: 'RS256',
+          kid: config.bank.prefix + '300' // Key ID for identifying our bank
+        }
+      });
+      
+      console.log('JWT signed successfully');
+
+      // Send to destination bank
+      console.log('Sending transaction to:', destinationBank.transactionEndpoint);
+      try {
+        const response = await axios.post(
+          destinationBank.transactionEndpoint,
+          { jwt: signedJwt },
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        console.log('Transaction sent successfully:', response.data);
+        return response.data;
+      } catch (error) {
+        // Handle axios error with proper type checking
+        if (axios.isAxiosError(error)) {
+          console.error('Error sending transaction to destination bank:', error.response?.data || error.message);
+          throw new Error(`Failed to send transaction: ${error.response?.data?.message || error.message}`);
+        } else {
+          // Handle non-axios errors
+          console.error('Unknown error sending transaction:', error);
+          throw new Error('Failed to send transaction: Unknown error');
+        }
+      }
     } catch (error) {
-      throw new Error('Failed to send transaction to destination bank');
+      console.error('Error in initiateExternalTransfer:', error);
+      throw error;
     }
   }
 }
