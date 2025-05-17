@@ -159,12 +159,14 @@ export class TransactionService {
   }
 
   public async createExternalTransfer(transferData: IExternalTransfer): Promise<ITransaction> {
+    // Validate the accounts and ensure sufficient funds
     const fromAccount = await this.validateAccounts(
       transferData.fromAccountId,
       transferData.toAccount,
       transferData.amount
     );
 
+    // Create a pending transaction record
     const transaction = await Transaction.create({
       transactionId: crypto.randomUUID(),
       type: TransactionType.EXTERNAL,
@@ -181,18 +183,64 @@ export class TransactionService {
     });
 
     try {
-      // Since we've migrated to SQLite, we'll just process the transfer locally
+      // Update the local balance
       await this.updateBalances(fromAccount, null, transferData.amount, TransactionType.EXTERNAL);
-
-      transaction.status = TransactionStatus.COMPLETED;
-      transaction.completedAt = new Date();
-      await transaction.save();
+      
+      // Use the B2B service to send the transfer to the destination bank
+      try {
+        console.log('Initiating external transfer through B2B service');
+        const b2bService = await import('./b2b.service').then(m => m.B2BService.getInstance());
+        
+        // Send the transfer to the destination bank
+        const result = await b2bService.initiateExternalTransfer(
+          fromAccount.accountNumber,
+          transferData.toAccount,
+          transferData.amount,
+          fromAccount.currency,
+          transferData.description || 'Transfer from ' + config.bank.name,
+          transferData.toBankId
+        );
+        
+        console.log('External transfer initiated successfully:', result);
+        
+        // Mark the transaction as completed
+        transaction.status = TransactionStatus.COMPLETED;
+        transaction.completedAt = new Date();
+        await transaction.save();
+      } catch (error) {
+        console.error('Error initiating external transfer:', error);
+        
+        // If the B2B transfer fails, we should revert the balance update
+        // Credit the amount back to the sender's account
+        try {
+          // Use the same method but reverse the direction
+          // This adds the amount back to the fromAccount
+          fromAccount.balance += transferData.amount;
+          await fromAccount.save();
+          console.log(`Reverted balance for account ${fromAccount.id} to ${fromAccount.balance}`);
+        } catch (balanceError) {
+          console.error('Failed to revert balance:', balanceError);
+          // Continue with the error handling even if balance revert fails
+        }
+        
+        // Mark the transaction as failed
+        transaction.status = TransactionStatus.FAILED;
+        transaction.errorMessage = error instanceof Error ? error.message : 'Failed to send transfer to destination bank';
+        await transaction.save();
+        
+        throw new TransactionError('Failed to send transfer to destination bank: ' + 
+          (error instanceof Error ? error.message : 'Unknown error'));
+      }
 
       return this.toTransactionResponse(transaction);
     } catch (error) {
-      transaction.status = TransactionStatus.FAILED;
-      transaction.errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      await transaction.save();
+      // Only update the transaction status if it hasn't been updated already
+      if (transaction.status === TransactionStatus.PENDING) {
+        transaction.status = TransactionStatus.FAILED;
+        transaction.errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        await transaction.save();
+      }
+      
       throw error instanceof Error ? error : new Error('An unknown error occurred');
     }
   }

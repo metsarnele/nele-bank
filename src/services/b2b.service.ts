@@ -269,13 +269,24 @@ export class B2BService {
 
   }
 
+  /**
+   * Initiates an external transfer to another bank
+   * @param fromAccount The sender's account number
+   * @param toAccount The recipient's account number
+   * @param amount The amount to transfer
+   * @param currency The currency of the transfer
+   * @param explanation The description/explanation of the transfer
+   * @param targetBankId The ID of the destination bank (optional, will be determined if not provided)
+   * @returns The response from the destination bank
+   */
   public async initiateExternalTransfer(
     fromAccount: string,
     toAccount: string,
     amount: number,
     currency: string,
-    explanation: string
-  ): Promise<void> {
+    explanation: string,
+    targetBankId?: string
+  ): Promise<any> {
     try {
       console.log('Initiating external transfer:', { fromAccount, toAccount, amount, currency });
       

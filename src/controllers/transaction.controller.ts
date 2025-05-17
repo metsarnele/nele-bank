@@ -130,10 +130,49 @@ export class TransactionController {
       const { fromAccountId, toAccount, toBankId, amount, currency, description } = req.body;
 
       // Validate required fields
-      if (!fromAccountId || !toAccount || !toBankId || !amount || !currency) {
+      if (!fromAccountId || !toAccount || !amount || !currency) {
         res.status(400).json({
           status: 'error',
           message: 'Missing required fields'
+        });
+        return;
+      }
+      
+      // Get the destination bank ID
+      let targetBankId = toBankId;
+      
+      // If bank ID is not provided, we need to determine it
+      if (!targetBankId) {
+        console.log('Bank ID not provided, attempting to determine from account number:', toAccount);
+        
+        // In a real banking system, we would query the Central Bank's registry
+        // to determine which bank an account belongs to
+        
+        // For Henno Bank, we know their accounts start with '61cb'
+        if (toAccount.startsWith('61cb')) {
+          targetBankId = 'HENN'; // Henno Bank
+          console.log('Determined bank ID for Henno Bank:', targetBankId);
+        } else {
+          // For other banks, we require the toBankId to be explicitly provided
+          // This is because account number formats vary and may not contain identifiable prefixes
+          res.status(400).json({
+            status: 'error',
+            message: 'Could not determine destination bank. Please provide toBankId parameter.'
+          });
+          return;
+        }
+      }
+      
+      // Validate the bank ID with the Central Bank
+      try {
+        // In production, we would verify the bank ID with the Central Bank
+        // For now, we'll just log it
+        console.log('Using bank ID for external transfer:', targetBankId);
+      } catch (error) {
+        console.error('Error verifying bank ID with Central Bank:', error);
+        res.status(400).json({
+          status: 'error',
+          message: 'Invalid bank ID or bank not registered with Central Bank'
         });
         return;
       }
@@ -160,7 +199,7 @@ export class TransactionController {
       const transaction = await this.transactionService.createExternalTransfer({
         fromAccountId,
         toAccount,
-        toBankId,
+        toBankId: targetBankId, // Use the determined bank ID
         amount,
         currency,
         description
