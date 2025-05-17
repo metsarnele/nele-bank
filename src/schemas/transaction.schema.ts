@@ -32,7 +32,8 @@ export const externalTransferSchema = baseTransactionSchema.extend({
     .max(50, 'Account number cannot exceed 50 characters'),
   toBankId: z.string()
     .min(1, 'Destination bank ID is required')
-    .max(10, 'Bank ID cannot exceed 10 characters'),
+    .max(10, 'Bank ID cannot exceed 10 characters')
+    .optional(), // Make toBankId optional
   type: z.literal('external')
 });
 
