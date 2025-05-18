@@ -52,13 +52,13 @@ export class B2BService {
       // Verify with central bank
       console.log(`Verifying bank ${bankPrefix} with central bank at ${config.centralBank.verifyUrl}`);
       
+      // Make sure the central bank URL is properly configured
+      if (!config.centralBank.verifyUrl) {
+        throw new Error('Central bank verification URL is not configured');
+      }
+      
+      // Verify the bank with the central bank
       try {
-        // Make sure the central bank URL is properly configured
-        if (!config.centralBank.verifyUrl) {
-          throw new Error('Central bank verification URL is not configured');
-        }
-        
-        // Verify the bank with the central bank
         const response = await axios.get(
           `${config.centralBank.verifyUrl}/${bankPrefix}`,
           {
