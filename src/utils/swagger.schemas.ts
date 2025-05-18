@@ -366,56 +366,45 @@ export const schemas: { [key: string]: OpenAPIV3.SchemaObject } = {
 
   TransferRequest: {
     type: 'object',
-    required: ['fromAccountId', 'toAccount', 'amount', 'currency', 'type'],
+    required: ['accountFrom', 'accountTo', 'amount'],
     properties: {
-      fromAccountId: {
-        type: 'integer',
-        description: 'Source account ID',
-        example: 1
-      },
-      toAccount: {
+      accountFrom: {
         type: 'string',
-        maxLength: 20,
+        maxLength: 50,
+        description: 'Source account number',
+        example: '300123456789'
+      },
+      accountTo: {
+        type: 'string',
+        maxLength: 50,
         description: 'Destination account number',
-        example: '1234567890'
-      },
-      toBankId: {
-        type: 'string',
-        maxLength: 10,
-        description: 'Destination bank ID (only for external transfers)',
-        example: 'CITIUS33'
+        example: '61c987654321'
       },
       amount: {
         type: 'number',
         minimum: 0.01,
         description: 'Transfer amount',
-        example: 100.50
+        example: 50.00
       },
       currency: {
         type: 'string',
         enum: ['EUR', 'USD', 'GBP'],
-        description: 'Currency of the transfer (must match both accounts for internal transfers)',
+        description: 'Currency of the transfer (defaults to EUR if not provided)',
         example: 'EUR'
       },
-      description: {
+      explanation: {
         type: 'string',
         maxLength: 200,
         description: 'Optional transfer description',
-        example: 'Rent payment'
-      },
-      type: {
-        type: 'string',
-        enum: ['internal', 'external'],
-        description: 'Type of transfer'
+        example: "Don't go spend it all at once"
       }
     },
     example: {
-      fromAccountId: 1,
-      toAccount: '1234567890',
-      amount: 100.50,
+      accountFrom: '300123456789',
+      accountTo: '61c987654321',
+      amount: 50.00,
       currency: 'EUR',
-      description: 'Rent payment',
-      type: 'internal'
+      explanation: "Don't go spend it all at once"
     }
   },
   TransferResponse: {

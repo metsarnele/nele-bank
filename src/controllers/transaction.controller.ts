@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import { TransactionService } from '../services/transaction.service';
 import { AccountService } from '../services/account.service';
-import { ITransaction, TransactionType } from '../interfaces/transaction.interface';
+import { B2BService } from '../services/b2b.service';
+import { config } from '../config';
+import { ITransaction, IInternalTransfer, IExternalTransfer, ISimplifiedTransfer, ITransactionResponse } from '../interfaces/transaction.interface';
 import crypto from 'crypto';
 
 export class TransactionController {
@@ -127,7 +129,7 @@ export class TransactionController {
 
   public async createExternalTransfer(req: Request, res: Response): Promise<void> {
     try {
-      const { fromAccountId, toAccount, toBankId, amount, currency, description } = req.body;
+      const { fromAccountId, toAccount, amount, currency, description } = req.body;
 
       // Validate required fields
       if (!fromAccountId || !toAccount || !amount || !currency) {
@@ -138,17 +140,18 @@ export class TransactionController {
         return;
       }
       
-      // Get the destination bank ID
-      const targetBankId = toBankId;
-      
-      // Bank ID is required for external transfers according to the requirements
-      if (!targetBankId) {
+      // Extract the bank ID from the account number
+      // The first three characters of the account number represent the bank prefix
+      if (!toAccount || toAccount.length < 3) {
         res.status(400).json({
           status: 'error',
-          message: 'Bank ID (toBankId) is required for external transfers'
+          message: 'Invalid account number format'
         });
         return;
       }
+      
+      const targetBankId = toAccount.substring(0, 3);
+      console.log(`Extracted bank prefix from account number: ${targetBankId}`);
       
       // Verify the bank ID with the Central Bank
       try {
@@ -193,7 +196,6 @@ export class TransactionController {
       const transaction = await this.transactionService.createExternalTransfer({
         fromAccountId,
         toAccount,
-        toBankId: targetBankId, // Use the determined bank ID
         amount,
         currency,
         description
@@ -210,6 +212,75 @@ export class TransactionController {
       res.status(400).json({
         status: 'error',
         message: error.message
+      });
+    }
+  }
+
+  /**
+   * Process a simplified transfer request that uses account numbers for both source and destination
+   * @param req Express request object
+   * @param res Express response object
+   */
+  public async createSimplifiedTransfer(req: Request, res: Response): Promise<void> {
+    try {
+      const { accountFrom, accountTo, amount, currency = 'EUR', explanation } = req.body;
+      
+      // Find the user's account by account number
+      const fromAccount = await this.accountService.getAccountByNumber(accountFrom);
+      
+      if (!fromAccount) {
+        res.status(404).json({
+          status: 'error',
+          message: 'Source account not found'
+        });
+        return;
+      }
+      
+      // Verify account ownership
+      const isOwner = await this.accountService.verifyAccountOwnership(fromAccount.id, req.user.id);
+      if (!isOwner) {
+        res.status(403).json({
+          status: 'error',
+          message: 'You do not have access to this account'
+        });
+        return;
+      }
+      
+      // Create a transaction object with the required format
+      const transactionData = {
+        fromAccountId: fromAccount.id,
+        toAccount: accountTo,
+        amount,
+        currency,
+        description: explanation
+      };
+      
+      // Determine if it's an internal or external transfer
+      let transaction;
+      if (accountTo.startsWith('300')) { // Using Nele Bank prefix
+        transaction = await this.transactionService.createInternalTransfer({
+          ...transactionData,
+          type: 'internal'
+        });
+      } else {
+        transaction = await this.transactionService.createExternalTransfer({
+          ...transactionData,
+          type: 'external'
+        });
+      }
+      
+      // Format the response
+      const formattedTransaction = await this.formatTransactionResponse(transaction);
+      
+      res.status(201).json({
+        message: 'Transaction completed successfully',
+        transaction: formattedTransaction
+      });
+    } catch (error: any) {
+      console.error('Error processing simplified transfer:', error);
+      res.status(400).json({
+        status: 'error',
+        message: error.message || 'An error occurred while processing the transfer'
       });
     }
   }

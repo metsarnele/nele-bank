@@ -37,15 +37,24 @@ export interface IInternalTransfer {
   amount: number;
   currency: string;
   description?: string;
+  type?: 'internal';
 }
 
 export interface IExternalTransfer {
   fromAccountId: number;
   toAccount: string;
-  toBankId: string;
   amount: number;
   currency: string;
   description?: string;
+  type?: 'external';
+}
+
+export interface ISimplifiedTransfer {
+  accountFrom: string;
+  accountTo: string;
+  amount: number;
+  currency?: string;
+  explanation?: string;
 }
 
 export interface ITransactionResponse {

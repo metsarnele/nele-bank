@@ -6,8 +6,11 @@ import { validateRequest } from '../middlewares/validation.middleware';
 import {
   internalTransferSchema,
   externalTransferSchema,
-  b2bTransactionSchema
+  b2bTransactionSchema,
+  unifiedTransferSchema,
+  simplifiedTransferSchema
 } from '../schemas/transaction.schema';
+import { config } from '../config';
 
 const router = Router();
 const transactionController = TransactionController.getInstance();
@@ -112,37 +115,29 @@ router.get('/', authenticate, (req, res) => transactionController.getTransaction
  *           schema:
  *             $ref: '#/components/schemas/TransferRequest'
  *           examples:
- *             internal:
- *               summary: Internal transfer example
+ *             transfer:
+ *               summary: Transfer example
  *               value:
- *                 fromAccountId: 123
- *                 toAccount: 'ABC123456789'
- *                 amount: 750.00
+ *                 accountFrom: '300123456789'
+ *                 accountTo: '61c987654321'
+ *                 amount: 50.00
  *                 currency: 'EUR'
- *                 description: 'Monthly savings'
- *                 type: 'internal'
- *             external:
- *               summary: External transfer example
- *               value:
- *                 fromAccountId: 123
- *                 toAccount: 'XYZ987654321'
- *                 toBankId: 'BANK003'
- *                 amount: 2500.00
- *                 currency: 'EUR'
- *                 description: 'Investment transfer'
- *                 type: 'external'
+ *                 explanation: "Don't go spend it all at once"
  *           description: |
  *             Required fields:
- *             - fromAccountId: ID of your account
- *             - toAccount: Recipient's account number
+ *             - accountFrom: Your account number
+ *             - accountTo: Recipient's account number
  *             - amount: Amount to transfer (> 0)
- *             - currency: Must be one of [EUR, USD, GBP]
- *             - type: 'internal' or 'external'
  *
- *             For external transfers, also include:
- *             - toBankId: ID of the recipient's bank
+ *             Optional fields:
+ *             - currency: Must be one of [EUR, USD, GBP] (defaults to EUR if not provided)
+ *             - explanation: Description of the transfer (max 200 characters)
  *
- *             Note: For internal transfers, both accounts must use the same currency
+ *             Notes:
+ *             - The system automatically determines if it's an internal or external transfer based on the account number
+ *             - Account numbers start with the bank prefix (e.g., '300' for Nele Bank, '61c' for Henno Bank)
+ *             - For internal transfers, both accounts must use the same currency
+ *             - For external transfers, the bank is identified by the first three characters of the account number
  *     responses:
  *       201:
  *         description: Transaction created successfully
@@ -249,19 +244,15 @@ router.get('/', authenticate, (req, res) => transactionController.getTransaction
  *                   type: string
  *                   example: 'Receiver account ABC123456789 not found'
  */
-// Create transaction (protected endpoint)
+// Transaction endpoint (protected endpoint)
 router.post('/', authenticate, validateRequest({
-  body: internalTransferSchema.or(externalTransferSchema)
+  body: simplifiedTransferSchema
 }), (req, res) => {
-  const { type } = req.body;
-  if (type === 'internal') {
-    return transactionController.createInternalTransfer(req, res);
-  } else if (type === 'external') {
-    return transactionController.createExternalTransfer(req, res);
-  } else {
-    return res.status(400).json({ error: 'Invalid transaction type' });
-  }
+  // Use the simplified format with accountFrom and accountTo
+  return transactionController.createSimplifiedTransfer(req, res);
 });
+
+
 
 /**
  * @swagger

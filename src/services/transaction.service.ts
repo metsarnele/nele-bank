@@ -176,7 +176,7 @@ export class TransactionService {
       fromAccountId: fromAccount.id,
       fromUserId: fromAccount.userId,
       externalToAccount: transferData.toAccount,
-      externalBankId: transferData.toBankId,
+      externalBankId: transferData.toAccount.substring(0, 3), // Extract bank prefix from account number
       description: transferData.description,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -197,8 +197,7 @@ export class TransactionService {
           transferData.toAccount,
           transferData.amount,
           fromAccount.currency,
-          transferData.description || 'Transfer from ' + config.bank.name,
-          transferData.toBankId
+          transferData.description || 'Transfer from ' + config.bank.name
         );
         
         console.log('External transfer initiated successfully:', result);

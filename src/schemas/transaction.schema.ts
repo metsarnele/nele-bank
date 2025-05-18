@@ -17,6 +17,7 @@ const baseTransactionSchema = z.object({
     .optional()
 });
 
+// Legacy schemas kept for backward compatibility
 export const internalTransferSchema = baseTransactionSchema.extend({
   fromAccountId: z.number().int('Account ID must be an integer'),
   toAccount: z.string()
@@ -30,10 +31,38 @@ export const externalTransferSchema = baseTransactionSchema.extend({
   toAccount: z.string()
     .min(1, 'Destination account number is required')
     .max(50, 'Account number cannot exceed 50 characters'),
-  toBankId: z.string()
-    .min(1, 'Destination bank ID is required')
-    .max(10, 'Bank ID cannot exceed 10 characters'),
+  // Bank ID is now extracted from the account number
   type: z.literal('external')
+});
+
+// New unified schema that doesn't require the type field
+export const unifiedTransferSchema = baseTransactionSchema.extend({
+  fromAccountId: z.number().int('Account ID must be an integer'),
+  toAccount: z.string()
+    .min(1, 'Destination account number is required')
+    .max(50, 'Account number cannot exceed 50 characters'),
+  // Type is optional and will be determined automatically if not provided
+  type: z.enum(['internal', 'external']).optional()
+});
+
+// Simplified schema using account numbers for both source and destination
+export const simplifiedTransferSchema = z.object({
+  accountFrom: z.string()
+    .min(1, 'Source account number is required')
+    .max(50, 'Account number cannot exceed 50 characters'),
+  accountTo: z.string()
+    .min(1, 'Destination account number is required')
+    .max(50, 'Account number cannot exceed 50 characters'),
+  amount: z.number()
+    .positive('Amount must be positive')
+    .min(0.01, 'Minimum transaction amount is 0.01'),
+  currency: z.enum(['EUR', 'USD', 'GBP'], {
+    required_error: 'Currency is required',
+    invalid_type_error: 'Currency must be one of: EUR, USD, GBP'
+  }).optional(), // Make currency optional, default to EUR if not provided
+  explanation: z.string()
+    .max(200, 'Explanation cannot exceed 200 characters')
+    .optional()
 });
 
 export const b2bTransactionSchema = z.object({

@@ -276,7 +276,6 @@ export class B2BService {
    * @param amount The amount to transfer
    * @param currency The currency of the transfer
    * @param explanation The description/explanation of the transfer
-   * @param targetBankId The ID of the destination bank (optional, will be determined if not provided)
    * @returns The response from the destination bank
    */
   public async initiateExternalTransfer(
@@ -284,44 +283,22 @@ export class B2BService {
     toAccount: string,
     amount: number,
     currency: string,
-    explanation: string,
-    targetBankId?: string
+    explanation: string
   ): Promise<any> {
     try {
       console.log('Initiating external transfer:', { fromAccount, toAccount, amount, currency });
       
-      // Extract destination bank prefix from the destination account or bank ID
-      // Try different strategies to identify the bank
-      let destinationBankPrefix;
+      // Extract the bank prefix from the first three characters of the account number
+      if (!toAccount || toAccount.length < 3) {
+        throw new Error('Invalid account number format');
+      }
       
-      // Strategy 1: Check if the account has a known format with bank prefix
-      if (toAccount.includes('HENN')) {
-        destinationBankPrefix = 'HENN';
-      } 
-      // Strategy 2: For Henno Bank's specific account format
-      else if (toAccount.startsWith('61cb')) {
-        destinationBankPrefix = 'HENN';
-      }
-      // Default fallback
-      else {
-        // If we can't determine the bank prefix, use a configuration mapping
-        // This could be expanded to a more comprehensive bank identification system
-        const bankPrefixMap: Record<string, string> = {
-          '61cb': 'HENN', // Henno Bank accounts often start with this
-          '300': 'NELE'   // Your bank's accounts
-        };
-        
-        // Try to match the start of the account number with known patterns
-        const matchedPrefix = Object.keys(bankPrefixMap).find(prefix => 
-          toAccount.startsWith(prefix)
-        );
-        
-        if (matchedPrefix) {
-          destinationBankPrefix = bankPrefixMap[matchedPrefix];
-        } else {
-          throw new Error('Could not determine destination bank from account number');
-        }
-      }
+      // Get the first three characters as the bank prefix
+      const bankPrefix = toAccount.substring(0, 3);
+      console.log(`Extracted bank prefix from account number: ${bankPrefix}`);
+      
+      // Use the bank prefix directly as the destination bank identifier
+      const destinationBankPrefix = bankPrefix;
       
       console.log('Determined destination bank prefix:', destinationBankPrefix);
       
