@@ -39,6 +39,7 @@ interface Config {
     publicKeyUrl: string;
     registerUrl: string;
     verifyUrl: string;
+    apiKey: string;
   };
   database: DBConfig & {
     test: DBConfig;
@@ -81,10 +82,11 @@ export const config: Config = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
   centralBank: {
-    url: process.env.CENTRAL_BANK_URL || 'http://localhost:8001',
-    publicKeyUrl: process.env.CENTRAL_BANK_PUBLIC_KEY_URL || 'http://localhost:8001/.well-known/jwks.json',
-    registerUrl: process.env.CENTRAL_BANK_REGISTER_URL || 'http://localhost:8001/banks/register',
-    verifyUrl: process.env.CENTRAL_BANK_VERIFY_URL || 'http://localhost:8001/banks/verify',
+    url: process.env.CENTRAL_BANK_URL || 'https://henno.cfd/central-bank',
+    publicKeyUrl: process.env.CENTRAL_BANK_PUBLIC_KEY_URL || 'https://henno.cfd/central-bank/.well-known/jwks.json',
+    registerUrl: process.env.CENTRAL_BANK_REGISTER_URL || 'https://henno.cfd/central-bank/api/v1/banks/register',
+    verifyUrl: process.env.CENTRAL_BANK_VERIFY_URL || 'https://henno.cfd/central-bank/api/v1/banks/verify',
+    apiKey: process.env.CENTRAL_BANK_API_KEY || 'nele-bank-api-key',
   },
   database: {
     path: process.env.DB_PATH || './nele_bank.sqlite',

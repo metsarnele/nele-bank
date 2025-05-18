@@ -37,9 +37,9 @@ export class B2BService {
 
   public async verifyBankWithCentralBank(bankPrefix: string): Promise<IBankVerificationResponse> {
     try {
-      // Mock response for testing
+      // For testing only - not used in production
       if (process.env.TEST_MODE === 'true') {
-        // Mock response for testing
+        console.log('Test mode enabled, using mock bank data');
         return {
           name: 'Test Bank',
           prefix: bankPrefix,
@@ -49,18 +49,34 @@ export class B2BService {
         };
       }
 
-      const response = await axios.get(
-        `${config.centralBank.verifyUrl}/${bankPrefix}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${config.centralBank.apiKey}`
-          }
+      // Verify with central bank
+      console.log(`Verifying bank ${bankPrefix} with central bank at ${config.centralBank.verifyUrl}`);
+      
+      try {
+        // Make sure the central bank URL is properly configured
+        if (!config.centralBank.verifyUrl) {
+          throw new Error('Central bank verification URL is not configured');
         }
-      );
-
-      return response.data;
+        
+        // Verify the bank with the central bank
+        const response = await axios.get(
+          `${config.centralBank.verifyUrl}/${bankPrefix}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${config.centralBank.apiKey}`
+            }
+          }
+        );
+        
+        console.log('Central bank verification successful:', response.data);
+        return response.data;
+      } catch (centralBankError) {
+        console.error('Central bank verification failed:', centralBankError);
+        throw new Error(`Failed to verify bank with Central Bank: ${centralBankError instanceof Error ? centralBankError.message : 'Unknown error'}`);
+      }
     } catch (error) {
-      throw new Error('Failed to verify bank with Central Bank');
+      console.error('Bank verification error:', error);
+      throw error;
     }
   }
 
@@ -288,40 +304,35 @@ export class B2BService {
     try {
       console.log('Initiating external transfer:', { fromAccount, toAccount, amount, currency });
       
-      // Extract the bank prefix from the first three characters of the account number
+      // Validate account number format
       if (!toAccount || toAccount.length < 3) {
-        throw new Error('Invalid account number format');
+        throw new Error('Invalid destination account number format');
       }
       
-      // Get the first three characters as the bank prefix
+      // Extract the bank prefix from the first three characters of the account number
       const bankPrefix = toAccount.substring(0, 3);
       console.log(`Extracted bank prefix from account number: ${bankPrefix}`);
       
-      // Use the bank prefix directly as the destination bank identifier
-      const destinationBankPrefix = bankPrefix;
+      // Validate our own account format
+      if (!fromAccount || fromAccount.length < 3) {
+        throw new Error('Invalid source account number format');
+      }
       
-      console.log('Determined destination bank prefix:', destinationBankPrefix);
+      // Ensure we're not sending to our own bank
+      if (bankPrefix === config.bank.prefix.substring(0, 3)) {
+        throw new Error('Cannot use external transfer for accounts at our own bank');
+      }
       
-      // Get destination bank info from Central Bank
+      console.log('Verifying destination bank with prefix:', bankPrefix);
+      
+      // Get destination bank info
       let destinationBank;
       try {
-        destinationBank = await this.verifyBankWithCentralBank(destinationBankPrefix);
-        console.log('Destination bank info:', destinationBank);
+        destinationBank = await this.verifyBankWithCentralBank(bankPrefix);
+        console.log('Destination bank verified successfully:', destinationBank);
       } catch (error) {
         console.error('Failed to verify destination bank:', error);
-        // If in test mode, use mock destination bank
-        if (process.env.TEST_MODE === 'true') {
-          console.log('Using test mode for destination bank');
-          destinationBank = {
-            name: 'Henno Pank',
-            prefix: 'HENN',
-            transactionEndpoint: 'https://henno.cfd/henno-pank/api/v1/transactions/b2b',
-            jwksEndpoint: 'https://henno.cfd/henno-pank/.well-known/jwks.json',
-            isActive: true
-          };
-        } else {
-          throw new Error('Destination bank verification failed');
-        }
+        throw new Error(`Destination bank verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
 
       if (!destinationBank.isActive) {
